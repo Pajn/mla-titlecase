@@ -219,7 +219,9 @@ impl PluginPayload {
     pub(crate) fn validate(&self) -> Result<()> {
         match self {
             Self::WordSet { words } => validate_words(words),
-            Self::CanonicalMap { entries } | Self::ProtectedSpellings { entries } => validate_map_entries(entries),
+            Self::CanonicalMap { entries } | Self::ProtectedSpellings { entries } => {
+                validate_map_entries(entries)
+            }
             Self::MultiwordMap { entries } => validate_multiword_entries(entries),
             Self::RankedWords { entries } => validate_ranked_entries(entries),
         }
