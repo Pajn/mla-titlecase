@@ -1,0 +1,79 @@
+use crate::classify::{is_hyphen, is_opening_punctuation, is_significant_word};
+use crate::token::Token;
+
+pub(crate) fn first_significant_word(tokens: &[Token<'_>]) -> Option<usize> {
+    tokens.iter().position(|token| is_significant_word(*token))
+}
+
+pub(crate) fn last_significant_word(tokens: &[Token<'_>]) -> Option<usize> {
+    tokens.iter().rposition(|token| is_significant_word(*token))
+}
+
+pub(crate) fn follows_colon(tokens: &[Token<'_>], index: usize) -> bool {
+    let mut cursor = index;
+    while cursor > 0 {
+        cursor -= 1;
+        let token = tokens[cursor];
+        if token.is_word() {
+            return false;
+        }
+        if token.kind == crate::token::TokenKind::Colon {
+            return true;
+        }
+        if !token.text.chars().all(char::is_whitespace) && !is_opening_punctuation(token) {
+            return false;
+        }
+    }
+    false
+}
+
+pub(crate) fn part_of_hyphenated_compound(tokens: &[Token<'_>], index: usize) -> bool {
+    preceded_by_hyphen(tokens, index) || followed_by_hyphen(tokens, index)
+}
+
+pub(crate) fn preceded_by_hyphen(tokens: &[Token<'_>], index: usize) -> bool {
+    tokens.get(index.wrapping_sub(1)).is_some_and(|token| is_hyphen(*token))
+}
+
+pub(crate) fn followed_by_hyphen(tokens: &[Token<'_>], index: usize) -> bool {
+    tokens.get(index + 1).is_some_and(|token| is_hyphen(*token))
+}
+
+pub(crate) fn likely_name_particle_context(tokens: &[Token<'_>], index: usize) -> bool {
+    previous_word(tokens, index).is_some() && next_word(tokens, index).is_some()
+}
+
+fn previous_word<'a>(tokens: &'a [Token<'a>], index: usize) -> Option<Token<'a>> {
+    tokens[..index].iter().rev().copied().find(|token| token.is_word())
+}
+
+fn next_word<'a>(tokens: &'a [Token<'a>], index: usize) -> Option<Token<'a>> {
+    tokens[index + 1..].iter().copied().find(|token| token.is_word())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{follows_colon, likely_name_particle_context, part_of_hyphenated_compound};
+    use crate::tokenizer::tokenize;
+
+    #[test]
+    fn detects_colon_context() {
+        let tokens = tokenize("Title: the sequel");
+        let word_index = tokens.iter().position(|token| token.text == "the").unwrap();
+        assert!(follows_colon(&tokens, word_index));
+    }
+
+    #[test]
+    fn detects_hyphen_context() {
+        let tokens = tokenize("state-of-the-art");
+        let word_index = tokens.iter().position(|token| token.text == "of").unwrap();
+        assert!(part_of_hyphenated_compound(&tokens, word_index));
+    }
+
+    #[test]
+    fn detects_simple_name_particles() {
+        let tokens = tokenize("Ludwig van Beethoven");
+        let word_index = tokens.iter().position(|token| token.text == "van").unwrap();
+        assert!(likely_name_particle_context(&tokens, word_index));
+    }
+}
