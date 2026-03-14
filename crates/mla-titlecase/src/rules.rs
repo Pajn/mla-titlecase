@@ -5,7 +5,7 @@ use crate::context::{
     part_of_hyphenated_compound,
 };
 use crate::lexicon::{
-    abbreviation_spelling, built_in_protected_spelling, is_name_particle, is_small_word,
+    abbreviation_spelling, built_in_protected_spelling, is_name_particle_for_locale, is_small_word,
 };
 use crate::token::Token;
 use crate::util::normalize::lookup_key;
@@ -57,7 +57,7 @@ pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> Str
         }
 
         if options.name_particle_policy == NameParticlePolicy::Heuristic
-            && is_name_particle(&key)
+            && is_name_particle_for_locale(&key, options.locale)
             && !should_capitalize
             && likely_name_particle_context(tokens, index)
         {
@@ -99,7 +99,7 @@ fn should_force_lowercase(
     }
 
     if options.name_particle_policy == NameParticlePolicy::Heuristic
-        && is_name_particle(key)
+        && is_name_particle_for_locale(key, options.locale)
         && likely_name_particle_context(tokens, index)
     {
         return true;

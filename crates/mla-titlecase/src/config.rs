@@ -1,6 +1,7 @@
 //! Configuration types for the MLA title-casing engine.
 
 use crate::lexicon::ExternalLexicons;
+use crate::locale;
 
 /// Controls how the engine decides whether a word should stay lowercase.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -31,11 +32,23 @@ pub enum NameParticlePolicy {
     Heuristic,
 }
 
-/// Locale hook for opt-in future casing extensions.
+/// Locale/profile hook for opt-in CLDR-inspired casing extensions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LocaleProfile {
     /// Default English-centric MLA behavior.
     English,
+    /// Dutch locale/profile behavior such as `IJ` digraph casing and common particles.
+    Dutch,
+    /// French locale/profile behavior and common particles.
+    French,
+    /// German locale/profile behavior and common particles.
+    German,
+    /// Italian locale/profile behavior and common particles.
+    Italian,
+    /// Spanish locale/profile behavior and common particles.
+    Spanish,
+    /// Turkish locale/profile behavior for dotted/dotless `i`.
+    Turkish,
 }
 
 /// Options for [`crate::titlecase_with_options`].
@@ -88,5 +101,52 @@ impl<'a> TitleCaseOptions<'a> {
     #[must_use]
     pub fn with_external_lexicons(external_lexicons: &'a ExternalLexicons) -> Self {
         Self { external_lexicons: Some(external_lexicons), ..Self::default() }
+    }
+
+    /// Returns default options configured for a specific locale/profile.
+    #[must_use]
+    pub fn with_locale(locale: LocaleProfile) -> Self {
+        Self {
+            locale,
+            name_particle_policy: locale.default_name_particle_policy(),
+            ..Self::default()
+        }
+    }
+}
+
+impl LocaleProfile {
+    /// Resolves a profile from a BCP-47-like language tag, defaulting to English.
+    #[must_use]
+    pub fn from_bcp47(tag: &str) -> Self {
+        locale::resolve_locale_profile(tag)
+    }
+
+    /// Returns the normalized primary language tag for this locale/profile.
+    #[must_use]
+    pub const fn bcp47_tag(self) -> &'static str {
+        locale::locale_tag(self)
+    }
+
+    pub(crate) const fn default_name_particle_policy(self) -> NameParticlePolicy {
+        locale::default_name_particle_policy(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{LocaleProfile, NameParticlePolicy, TitleCaseOptions};
+
+    #[test]
+    fn builds_locale_specific_defaults() {
+        let options = TitleCaseOptions::with_locale(LocaleProfile::Dutch);
+        assert_eq!(options.locale, LocaleProfile::Dutch);
+        assert_eq!(options.name_particle_policy, NameParticlePolicy::Heuristic);
+    }
+
+    #[test]
+    fn resolves_profiles_from_bcp47_tags() {
+        assert_eq!(LocaleProfile::from_bcp47("fr-FR"), LocaleProfile::French);
+        assert_eq!(LocaleProfile::from_bcp47("tr"), LocaleProfile::Turkish);
+        assert_eq!(LocaleProfile::from_bcp47("en-US"), LocaleProfile::English);
     }
 }

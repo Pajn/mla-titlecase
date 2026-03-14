@@ -1,7 +1,10 @@
-use crate::config::{LocaleProfile, TitleCaseOptions};
+use crate::{
+    config::{LocaleProfile, TitleCaseOptions},
+    util::unicode::{capitalize_with_locale, lowercase_with_locale},
+};
 
-pub(crate) fn lowercase_word(word: &str, _locale: LocaleProfile) -> String {
-    word.to_lowercase()
+pub(crate) fn lowercase_word(word: &str, locale: LocaleProfile) -> String {
+    lowercase_with_locale(word, locale)
 }
 
 pub(crate) fn is_all_caps_acronym(word: &str) -> bool {
@@ -86,31 +89,8 @@ fn style_dotted_abbreviation(word: &str) -> String {
     result
 }
 
-pub(crate) fn capitalize_word(word: &str, _locale: LocaleProfile) -> String {
-    let mut result = String::with_capacity(word.len());
-    let mut make_upper = true;
-
-    for ch in word.chars() {
-        if ch.is_alphabetic() {
-            if make_upper {
-                for mapped in ch.to_uppercase() {
-                    result.push(mapped);
-                }
-                make_upper = false;
-            } else {
-                for mapped in ch.to_lowercase() {
-                    result.push(mapped);
-                }
-            }
-        } else {
-            result.push(ch);
-            if matches!(ch, '\'' | '\u{2019}') {
-                make_upper = true;
-            }
-        }
-    }
-
-    result
+pub(crate) fn capitalize_word(word: &str, locale: LocaleProfile) -> String {
+    capitalize_with_locale(word, locale)
 }
 
 #[cfg(test)]
@@ -142,5 +122,11 @@ mod tests {
         let options = TitleCaseOptions::default();
         assert_eq!(style_word("u.s.a.", true, &options), "U.S.A.");
         assert_eq!(style_word("e.g.", true, &options), "e.g.");
+    }
+
+    #[test]
+    fn applies_locale_specific_casing() {
+        assert_eq!(capitalize_word("ijsselmeer", LocaleProfile::Dutch), "IJsselmeer");
+        assert_eq!(capitalize_word("istanbul", LocaleProfile::Turkish), "İstanbul");
     }
 }

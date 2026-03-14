@@ -24,6 +24,7 @@ pub mod util;
 mod casing;
 mod classify;
 mod context;
+mod locale;
 mod rules;
 mod titlecase;
 mod token;
