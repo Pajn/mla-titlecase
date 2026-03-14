@@ -1,0 +1,4 @@
+# tiny SCOWL-like fixture
+alpha
+beta
+gamma

@@ -1,0 +1,3 @@
+common 1
+frequent 2
+rare 9
