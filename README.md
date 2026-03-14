@@ -95,6 +95,7 @@ cargo run -p mla-titlecase-cli -- lexicon diff-plugin left.json right.mlatl --js
 The CLI preserves source metadata and notice text in prepared/plugin artifacts.
 
 - `scowl` is the recommended general English membership source.
+- `gnd` is a narrower CC0 authority source aimed at German and European person-name coverage.
 - `stopwords-iso` is convenient heuristic input, but it does not define MLA semantics.
 - `wikidata` is the first optional authority-style source and defaults to a live CC0 SPARQL query.
 - `wordfreq` is opt-in and requires `--acknowledge-cc-by-sa`.

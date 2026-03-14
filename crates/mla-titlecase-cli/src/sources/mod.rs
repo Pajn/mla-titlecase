@@ -10,6 +10,7 @@ use crate::{
 };
 
 pub(crate) mod github;
+pub(crate) mod gnd;
 pub(crate) mod scowl;
 pub(crate) mod stopwords_iso;
 pub(crate) mod wikidata;
@@ -18,6 +19,7 @@ pub(crate) mod wordfreq;
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, clap::ValueEnum, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum SourceId {
+    Gnd,
     Scowl,
     StopwordsIso,
     Wikidata,
@@ -27,6 +29,7 @@ pub(crate) enum SourceId {
 impl SourceId {
     pub(crate) const fn as_str(self) -> &'static str {
         match self {
+            Self::Gnd => "gnd",
             Self::Scowl => "scowl",
             Self::StopwordsIso => "stopwords-iso",
             Self::Wikidata => "wikidata",
@@ -76,8 +79,9 @@ pub(crate) struct PrepareOptions {
     pub(crate) payload_kind: Option<PreparePayloadKind>,
 }
 
-pub(crate) fn all_sources() -> [SourceDefinition; 4] {
+pub(crate) fn all_sources() -> [SourceDefinition; 5] {
     [
+        gnd::definition(),
         scowl::definition(),
         stopwords_iso::definition(),
         wikidata::definition(),
@@ -87,6 +91,7 @@ pub(crate) fn all_sources() -> [SourceDefinition; 4] {
 
 pub(crate) fn source_definition(source: SourceId) -> SourceDefinition {
     match source {
+        SourceId::Gnd => gnd::definition(),
         SourceId::Scowl => scowl::definition(),
         SourceId::StopwordsIso => stopwords_iso::definition(),
         SourceId::Wikidata => wikidata::definition(),
@@ -100,6 +105,7 @@ pub(crate) fn fetch_default(
     options: &FetchOptions,
 ) -> Result<ResolvedSource> {
     match source {
+        SourceId::Gnd => gnd::fetch(client, options),
         SourceId::Scowl => scowl::fetch(client),
         SourceId::StopwordsIso => stopwords_iso::fetch(client),
         SourceId::Wikidata => wikidata::fetch(client, options),
@@ -115,6 +121,7 @@ pub(crate) fn prepare_source(
 ) -> Result<PreparedLexicon> {
     let definition = source_definition(source);
     let NormalizedPayload { payload, report } = match source {
+        SourceId::Gnd => gnd::prepare(raw, options)?,
         SourceId::Scowl => scowl::prepare(raw, options)?,
         SourceId::StopwordsIso => stopwords_iso::prepare(raw, options)?,
         SourceId::Wikidata => wikidata::prepare(raw, options)?,
@@ -218,7 +225,7 @@ mod tests {
     #[test]
     fn exposes_source_registry() {
         let sources = all_sources();
-        assert_eq!(sources.len(), 4);
+        assert_eq!(sources.len(), 5);
         assert_eq!(source_definition(SourceId::Scowl).id.as_str(), "scowl");
     }
 }

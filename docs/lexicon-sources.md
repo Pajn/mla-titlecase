@@ -8,6 +8,7 @@ The repository does **not** commit fetched raw data or prepared outputs. End use
 
 | Source | Default upstream artifact | Output kind | License / notice handling |
 | --- | --- | --- | --- |
+| `gnd` | live query to `lobid.org/gnd/search` | `CanonicalMap`, `MultiwordMap`, or `ProtectedSpellings` | GND authority data served by lobid is CC0; the exact request URL is preserved in the fetch manifest |
 | `scowl` | `en-wl/wordlist:data/scowl-pre.txt` on `v2` | `WordSet` | Preserve the upstream `Copyright` notice |
 | `stopwords-iso` | `stopwords-iso/stopwords-en:stopwords-en.json` on `master` | `WordSet` | MIT license text is preserved in fetch metadata |
 | `wikidata` | live query to `query.wikidata.org/sparql` | `CanonicalMap`, `MultiwordMap`, or `ProtectedSpellings` | Structured data is CC0; the exact query URL is preserved in the fetch manifest |
@@ -112,6 +113,29 @@ cargo run -p mla-titlecase-cli -- \
 ```
 
 Wikidata is useful when you want broad optional coverage for people, organizations, works, and aliases. It is less attractive when you need a small, deterministic, fully curated source: live query results can be noisy if your filters are too broad, and larger queries will cost more time and memory than the GitHub-backed sources.
+
+## `gnd`
+
+`gnd` uses the public lobid search API for the German National Library authority file. The default fetch is intentionally narrower than Wikidata: it queries `lobid.org/gnd/search` with `q=*`, filters to `type:Person`, and preserves the full request URL in the fetch manifest.
+
+That makes GND a good fit when you want:
+
+- German and European authority-style names
+- person-name normalization in German-heavy titles
+- a narrower, higher-signal complement to Wikidata
+
+The CLI currently extracts both heading-style names and person-entity name components when they are available, so a single fetch can preserve forms such as:
+
+- `Beethoven, Ludwig van`
+- `Ludwig van Beethoven`
+
+Like Wikidata, `prepare` supports:
+
+- `--payload-kind canonical-map`
+- `--payload-kind multiword-map`
+- `--payload-kind protected-spellings`
+
+GND is better than Wikidata when you want a more focused authority source for European personal names. It is overkill when you just need general English word membership, and it is less attractive than Wikidata when you want broad multilingual coverage across organizations, works, and places.
 
 ## Licensing expectations
 
