@@ -15,7 +15,10 @@
 
 pub mod config;
 pub mod error;
+pub mod fst_store;
+pub mod json_store;
 pub mod lexicon;
+pub mod plugin;
 pub mod util;
 
 mod casing;
@@ -31,6 +34,10 @@ pub use config::{
 };
 pub use error::{Error, Result};
 pub use lexicon::ExternalLexicons;
+pub use plugin::{
+    LexiconPlugin, MapEntry, PluginMetadata, PluginPayload, PluginPayloadKind, RankedEntry,
+    PLUGIN_SCHEMA_VERSION,
+};
 
 /// Converts `input` to MLA-style title case using the default options.
 #[must_use]
