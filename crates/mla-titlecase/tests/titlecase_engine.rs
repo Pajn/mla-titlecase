@@ -2,7 +2,7 @@
 
 use mla_titlecase::{
     titlecase_mla, titlecase_with_options, ExternalLexicons, HyphenStyle, NameParticlePolicy,
-    SmallWordPolicy, TitleCaseOptions,
+    LocaleProfile, SmallWordPolicy, TitleCaseOptions,
 };
 
 #[test]
@@ -71,6 +71,23 @@ fn supports_name_particle_heuristics() {
     assert_eq!(
         titlecase_with_options("ludwig van beethoven in concert", &options),
         "Ludwig van Beethoven in Concert"
+    );
+}
+
+#[test]
+fn supports_locale_profile_defaults() {
+    let options = TitleCaseOptions::with_locale(LocaleProfile::Dutch);
+    assert_eq!(
+        titlecase_with_options("ijsselmeer and jan van der heijden", &options),
+        "IJsselmeer and Jan van der Heijden"
+    );
+}
+
+#[test]
+fn keeps_default_english_behavior_stable() {
+    assert_eq!(
+        titlecase_with_options("the wind in the willows", &TitleCaseOptions::default()),
+        "The Wind in the Willows"
     );
 }
 

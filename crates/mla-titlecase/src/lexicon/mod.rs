@@ -8,6 +8,6 @@ mod protected;
 mod small_words;
 
 pub(crate) use builtins::{
-    abbreviation_spelling, built_in_protected_spelling, is_name_particle, is_small_word,
+    abbreviation_spelling, built_in_protected_spelling, is_name_particle_for_locale, is_small_word,
 };
 pub use external::ExternalLexicons;
