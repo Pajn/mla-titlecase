@@ -1,12 +1,7 @@
 use crate::config::{LocaleProfile, NameParticlePolicy};
 
 pub(crate) fn resolve_locale_profile(tag: &str) -> LocaleProfile {
-    let primary = tag
-        .split(['-', '_'])
-        .next()
-        .unwrap_or(tag)
-        .trim()
-        .to_ascii_lowercase();
+    let primary = tag.split(['-', '_']).next().unwrap_or(tag).trim().to_ascii_lowercase();
 
     match primary.as_str() {
         "de" => LocaleProfile::German,

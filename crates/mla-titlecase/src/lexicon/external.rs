@@ -175,7 +175,11 @@ impl ExternalLexicons {
         })
     }
 
-    pub(crate) fn multiword_spelling(&self, tokens: &[Token<'_>], start: usize) -> Option<(usize, &str)> {
+    pub(crate) fn multiword_spelling(
+        &self,
+        tokens: &[Token<'_>],
+        start: usize,
+    ) -> Option<(usize, &str)> {
         if !tokens.get(start).is_some_and(|token| token.is_word()) {
             return None;
         }
@@ -196,10 +200,12 @@ impl ExternalLexicons {
             phrase.push_str(&lookup_key(token.text));
             words += 1;
 
-            if let Some(value) = self.multiword_maps.iter().rev().find_map(|backend| match backend {
-                MapBackend::Heap(map) => map.get(&phrase).map(String::as_str),
-                MapBackend::Fst(plugin) => plugin.map_value(&phrase),
-            }) {
+            if let Some(value) =
+                self.multiword_maps.iter().rev().find_map(|backend| match backend {
+                    MapBackend::Heap(map) => map.get(&phrase).map(String::as_str),
+                    MapBackend::Fst(plugin) => plugin.map_value(&phrase),
+                })
+            {
                 match_result = Some((index, value));
             }
 

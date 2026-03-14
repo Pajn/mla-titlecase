@@ -1,8 +1,8 @@
 //! Integration tests for the MLA title-casing engine.
 
 use mla_titlecase::{
-    titlecase_mla, titlecase_with_options, ExternalLexicons, HyphenStyle, NameParticlePolicy,
-    LocaleProfile, SmallWordPolicy, TitleCaseOptions,
+    titlecase_mla, titlecase_with_options, ExternalLexicons, HyphenStyle, LocaleProfile,
+    NameParticlePolicy, SmallWordPolicy, TitleCaseOptions,
 };
 
 #[test]
@@ -60,10 +60,7 @@ fn supports_additive_external_lexicons() {
         titlecase_with_options("copilot amid postgres updates", &options),
         "Copilot amid Postgres Updates"
     );
-    assert_eq!(
-        titlecase_with_options("new york city stories", &options),
-        "New York City Stories"
-    );
+    assert_eq!(titlecase_with_options("new york city stories", &options), "New York City Stories");
 }
 
 #[test]

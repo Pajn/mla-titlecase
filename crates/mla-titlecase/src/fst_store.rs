@@ -272,9 +272,7 @@ fn encode_payload(payload: &PluginPayload) -> Result<Vec<u8>> {
         PluginPayload::WordSet { words } => encode_word_set(words),
         PluginPayload::CanonicalMap { entries }
         | PluginPayload::MultiwordMap { entries }
-        | PluginPayload::ProtectedSpellings { entries } => {
-            encode_map_entries(entries)
-        }
+        | PluginPayload::ProtectedSpellings { entries } => encode_map_entries(entries),
         PluginPayload::RankedWords { entries } => encode_ranked_entries(entries),
     }
 }

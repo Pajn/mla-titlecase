@@ -24,8 +24,9 @@ pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> Str
             continue;
         }
 
-        if let Some((end_index, canonical_phrase)) =
-            options.external_lexicons.and_then(|lexicons| lexicons.multiword_spelling(tokens, index))
+        if let Some((end_index, canonical_phrase)) = options
+            .external_lexicons
+            .and_then(|lexicons| lexicons.multiword_spelling(tokens, index))
         {
             output.push_str(canonical_phrase);
             index = end_index + 1;
