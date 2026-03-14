@@ -34,6 +34,7 @@ pub struct FstRuntimePlugin {
 enum RuntimePayload {
     WordSet(Set<ByteRegion>),
     CanonicalMap { map: Map<ByteRegion>, values: ByteRegion },
+    MultiwordMap { map: Map<ByteRegion>, values: ByteRegion },
     RankedWords(Map<ByteRegion>),
     ProtectedSpellings { map: Map<ByteRegion>, values: ByteRegion },
 }
@@ -111,6 +112,7 @@ impl FstRuntimePlugin {
         match self.payload {
             RuntimePayload::WordSet(_) => PluginPayloadKind::WordSet,
             RuntimePayload::CanonicalMap { .. } => PluginPayloadKind::CanonicalMap,
+            RuntimePayload::MultiwordMap { .. } => PluginPayloadKind::MultiwordMap,
             RuntimePayload::RankedWords(_) => PluginPayloadKind::RankedWords,
             RuntimePayload::ProtectedSpellings { .. } => PluginPayloadKind::ProtectedSpellings,
         }
@@ -127,6 +129,7 @@ impl FstRuntimePlugin {
         let key = lookup_key(word);
         match &self.payload {
             RuntimePayload::CanonicalMap { map, values }
+            | RuntimePayload::MultiwordMap { map, values }
             | RuntimePayload::ProtectedSpellings { map, values } => {
                 map.get(key).and_then(|offset| read_c_string(values.as_ref(), offset as usize).ok())
             }
@@ -174,6 +177,14 @@ fn runtime_payload(storage: ByteStorage, layout: &PluginLayout) -> Result<Runtim
             let (map_range, values_range) =
                 parse_map_ranges(storage_bytes(&storage), &layout.payload_range)?;
             Ok(RuntimePayload::CanonicalMap {
+                map: Map::new(ByteRegion { storage: storage.clone(), range: map_range })?,
+                values: ByteRegion { storage, range: values_range },
+            })
+        }
+        PluginPayloadKind::MultiwordMap => {
+            let (map_range, values_range) =
+                parse_map_ranges(storage_bytes(&storage), &layout.payload_range)?;
+            Ok(RuntimePayload::MultiwordMap {
                 map: Map::new(ByteRegion { storage: storage.clone(), range: map_range })?,
                 values: ByteRegion { storage, range: values_range },
             })
@@ -259,7 +270,9 @@ fn storage_bytes(storage: &ByteStorage) -> &[u8] {
 fn encode_payload(payload: &PluginPayload) -> Result<Vec<u8>> {
     match payload {
         PluginPayload::WordSet { words } => encode_word_set(words),
-        PluginPayload::CanonicalMap { entries } | PluginPayload::ProtectedSpellings { entries } => {
+        PluginPayload::CanonicalMap { entries }
+        | PluginPayload::MultiwordMap { entries }
+        | PluginPayload::ProtectedSpellings { entries } => {
             encode_map_entries(entries)
         }
         PluginPayload::RankedWords { entries } => encode_ranked_entries(entries),
@@ -271,6 +284,9 @@ fn decode_payload(kind: PluginPayloadKind, bytes: &[u8]) -> Result<PluginPayload
         PluginPayloadKind::WordSet => Ok(PluginPayload::WordSet { words: decode_word_set(bytes)? }),
         PluginPayloadKind::CanonicalMap => {
             Ok(PluginPayload::CanonicalMap { entries: decode_map_entries(bytes)? })
+        }
+        PluginPayloadKind::MultiwordMap => {
+            Ok(PluginPayload::MultiwordMap { entries: decode_map_entries(bytes)? })
         }
         PluginPayloadKind::RankedWords => {
             Ok(PluginPayload::RankedWords { entries: decode_ranked_entries(bytes)? })
@@ -429,6 +445,26 @@ mod tests {
             metadata: PluginMetadata::new("fixture", "MIT"),
             payload: PluginPayload::CanonicalMap {
                 entries: vec![MapEntry { key: "github".to_string(), value: "GitHub".to_string() }],
+            },
+        };
+        let tempdir = tempdir().unwrap();
+        let path = tempdir.path().join("plugin.mlatl");
+
+        save_fst_plugin(&path, &plugin).unwrap();
+        let loaded = load_fst_plugin(&path).unwrap();
+
+        assert_eq!(loaded, plugin);
+    }
+
+    #[test]
+    fn round_trips_multiword_payloads() {
+        let plugin = LexiconPlugin {
+            metadata: PluginMetadata::new("fixture", "MIT"),
+            payload: PluginPayload::MultiwordMap {
+                entries: vec![MapEntry {
+                    key: "new york city".to_string(),
+                    value: "New York City".to_string(),
+                }],
             },
         };
         let tempdir = tempdir().unwrap();
