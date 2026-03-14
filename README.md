@@ -96,6 +96,7 @@ The CLI preserves source metadata and notice text in prepared/plugin artifacts.
 
 - `scowl` is the recommended general English membership source.
 - `gnd` is a narrower CC0 authority source aimed at German and European person-name coverage.
+- `musicbrainz` is a music-specific CC0 source for artist names and stylized forms.
 - `stopwords-iso` is convenient heuristic input, but it does not define MLA semantics.
 - `wikidata` is the first optional authority-style source and defaults to a live CC0 SPARQL query.
 - `wordfreq` is opt-in and requires `--acknowledge-cc-by-sa`.

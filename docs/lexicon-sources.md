@@ -9,6 +9,7 @@ The repository does **not** commit fetched raw data or prepared outputs. End use
 | Source | Default upstream artifact | Output kind | License / notice handling |
 | --- | --- | --- | --- |
 | `gnd` | live query to `lobid.org/gnd/search` | `CanonicalMap`, `MultiwordMap`, or `ProtectedSpellings` | GND authority data served by lobid is CC0; the exact request URL is preserved in the fetch manifest |
+| `musicbrainz` | live query to `musicbrainz.org/ws/2/artist/` | `CanonicalMap`, `MultiwordMap`, or `ProtectedSpellings` | MusicBrainz core database data is CC0; the exact request URL is preserved in the fetch manifest |
 | `scowl` | `en-wl/wordlist:data/scowl-pre.txt` on `v2` | `WordSet` | Preserve the upstream `Copyright` notice |
 | `stopwords-iso` | `stopwords-iso/stopwords-en:stopwords-en.json` on `master` | `WordSet` | MIT license text is preserved in fetch metadata |
 | `wikidata` | live query to `query.wikidata.org/sparql` | `CanonicalMap`, `MultiwordMap`, or `ProtectedSpellings` | Structured data is CC0; the exact query URL is preserved in the fetch manifest |
@@ -136,6 +137,30 @@ Like Wikidata, `prepare` supports:
 - `--payload-kind protected-spellings`
 
 GND is better than Wikidata when you want a more focused authority source for European personal names. It is overkill when you just need general English word membership, and it is less attractive than Wikidata when you want broad multilingual coverage across organizations, works, and places.
+
+## `musicbrainz`
+
+`musicbrainz` is deliberately narrow and deliberately explicit: the current CLI integration uses the public `musicbrainz.org/ws/2/artist/` JSON web service for artist records only. It does not claim to support every MusicBrainz dump or every non-core dataset.
+
+That makes it a strong fit for:
+
+- artist names
+- bands and performers
+- stylized single-token names such as `P!nk`
+- music-heavy deployments where brand-like casing matters
+
+The default fetch uses a small live query against the artist endpoint and accepts:
+
+- `--query <lucene-query>` to target a specific artist subset
+- `--limit <n>` to control response size
+
+During `prepare`, the CLI preserves artist `name`, `sort-name`, and alias surfaces, then lets you choose:
+
+- `--payload-kind protected-spellings` for stylized single-token names
+- `--payload-kind canonical-map` for single-token canonical surfaces
+- `--payload-kind multiword-map` for multiword artist and alias names
+
+Use MusicBrainz when the deployment is music-heavy and stylized artist names matter. Prefer Wikidata or GND when you need a broader general-purpose authority source.
 
 ## Licensing expectations
 

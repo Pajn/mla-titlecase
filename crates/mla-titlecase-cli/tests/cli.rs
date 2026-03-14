@@ -19,6 +19,7 @@ fn lists_sources() {
         .assert()
         .success()
         .stdout(predicate::str::contains("gnd"))
+        .stdout(predicate::str::contains("musicbrainz"))
         .stdout(predicate::str::contains("scowl"))
         .stdout(predicate::str::contains("stopwords-iso"))
         .stdout(predicate::str::contains("wikidata"))
@@ -55,6 +56,17 @@ fn shows_gnd_license_details() {
         .assert()
         .success()
         .stdout(predicate::str::contains("gnd"))
+        .stdout(predicate::str::contains("CC0"));
+}
+
+#[test]
+fn shows_musicbrainz_license_details() {
+    Command::cargo_bin("mla-titlecase")
+        .unwrap()
+        .args(["lexicon", "show-license", "musicbrainz"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("musicbrainz"))
         .stdout(predicate::str::contains("CC0"));
 }
 
@@ -404,6 +416,113 @@ fn prepare_build_inspect_and_diff_gnd_plugins() {
     let inspect: Value = serde_json::from_slice(&inspect).unwrap();
     assert_eq!(inspect["payload_kind"], "multiword-map");
     assert_eq!(inspect["multiword_entries"], 6);
+
+    let diff = Command::cargo_bin("mla-titlecase")
+        .unwrap()
+        .args([
+            "lexicon",
+            "diff-plugin",
+            json_plugin.to_str().unwrap(),
+            fst_plugin.to_str().unwrap(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let diff: Value = serde_json::from_slice(&diff).unwrap();
+    assert_eq!(diff["added"], 0);
+    assert_eq!(diff["removed"], 0);
+    assert_eq!(diff["changed"], 0);
+}
+
+#[test]
+fn prepare_build_inspect_and_diff_musicbrainz_plugins() {
+    let temp = tempdir().unwrap();
+    let raw = temp.path().join("musicbrainz.json");
+    let raw_manifest = temp.path().join("musicbrainz.json.manifest.json");
+    let prepared = temp.path().join("musicbrainz-prepared.json");
+    let json_plugin = temp.path().join("musicbrainz.json.plugin");
+    let fst_plugin = temp.path().join("musicbrainz.mlatl");
+
+    Command::cargo_bin("mla-titlecase")
+        .unwrap()
+        .args([
+            "lexicon",
+            "fetch",
+            "musicbrainz",
+            "--from-file",
+            fixture("musicbrainz-sample.json").to_str().unwrap(),
+            "--output",
+            raw.to_str().unwrap(),
+            "--manifest",
+            raw_manifest.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    Command::cargo_bin("mla-titlecase")
+        .unwrap()
+        .args([
+            "lexicon",
+            "prepare",
+            "musicbrainz",
+            "--input",
+            raw.to_str().unwrap(),
+            "--output",
+            prepared.to_str().unwrap(),
+            "--payload-kind",
+            "protected-spellings",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("prepared 2 musicbrainz entries"))
+        .stdout(predicate::str::contains("2 normalized entries"));
+
+    let prepared_json: Value = serde_json::from_slice(&std::fs::read(&prepared).unwrap()).unwrap();
+    assert_eq!(prepared_json["metadata"]["source_id"], "musicbrainz");
+    assert_eq!(prepared_json["payload"]["kind"], "protected-spellings");
+
+    Command::cargo_bin("mla-titlecase")
+        .unwrap()
+        .args([
+            "lexicon",
+            "build-plugin",
+            prepared.to_str().unwrap(),
+            "--output",
+            json_plugin.to_str().unwrap(),
+            "--format",
+            "json",
+        ])
+        .assert()
+        .success();
+
+    Command::cargo_bin("mla-titlecase")
+        .unwrap()
+        .args([
+            "lexicon",
+            "build-plugin",
+            prepared.to_str().unwrap(),
+            "--output",
+            fst_plugin.to_str().unwrap(),
+            "--format",
+            "fst",
+        ])
+        .assert()
+        .success();
+
+    let inspect = Command::cargo_bin("mla-titlecase")
+        .unwrap()
+        .args(["lexicon", "inspect-plugin", json_plugin.to_str().unwrap(), "--json"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let inspect: Value = serde_json::from_slice(&inspect).unwrap();
+    assert_eq!(inspect["payload_kind"], "protected-spellings");
+    assert_eq!(inspect["entry_count"], 2);
 
     let diff = Command::cargo_bin("mla-titlecase")
         .unwrap()

@@ -11,6 +11,7 @@ use crate::{
 
 pub(crate) mod github;
 pub(crate) mod gnd;
+pub(crate) mod musicbrainz;
 pub(crate) mod scowl;
 pub(crate) mod stopwords_iso;
 pub(crate) mod wikidata;
@@ -20,6 +21,7 @@ pub(crate) mod wordfreq;
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum SourceId {
     Gnd,
+    Musicbrainz,
     Scowl,
     StopwordsIso,
     Wikidata,
@@ -30,6 +32,7 @@ impl SourceId {
     pub(crate) const fn as_str(self) -> &'static str {
         match self {
             Self::Gnd => "gnd",
+            Self::Musicbrainz => "musicbrainz",
             Self::Scowl => "scowl",
             Self::StopwordsIso => "stopwords-iso",
             Self::Wikidata => "wikidata",
@@ -79,9 +82,10 @@ pub(crate) struct PrepareOptions {
     pub(crate) payload_kind: Option<PreparePayloadKind>,
 }
 
-pub(crate) fn all_sources() -> [SourceDefinition; 5] {
+pub(crate) fn all_sources() -> [SourceDefinition; 6] {
     [
         gnd::definition(),
+        musicbrainz::definition(),
         scowl::definition(),
         stopwords_iso::definition(),
         wikidata::definition(),
@@ -92,6 +96,7 @@ pub(crate) fn all_sources() -> [SourceDefinition; 5] {
 pub(crate) fn source_definition(source: SourceId) -> SourceDefinition {
     match source {
         SourceId::Gnd => gnd::definition(),
+        SourceId::Musicbrainz => musicbrainz::definition(),
         SourceId::Scowl => scowl::definition(),
         SourceId::StopwordsIso => stopwords_iso::definition(),
         SourceId::Wikidata => wikidata::definition(),
@@ -106,6 +111,7 @@ pub(crate) fn fetch_default(
 ) -> Result<ResolvedSource> {
     match source {
         SourceId::Gnd => gnd::fetch(client, options),
+        SourceId::Musicbrainz => musicbrainz::fetch(client, options),
         SourceId::Scowl => scowl::fetch(client),
         SourceId::StopwordsIso => stopwords_iso::fetch(client),
         SourceId::Wikidata => wikidata::fetch(client, options),
@@ -122,6 +128,7 @@ pub(crate) fn prepare_source(
     let definition = source_definition(source);
     let NormalizedPayload { payload, report } = match source {
         SourceId::Gnd => gnd::prepare(raw, options)?,
+        SourceId::Musicbrainz => musicbrainz::prepare(raw, options)?,
         SourceId::Scowl => scowl::prepare(raw, options)?,
         SourceId::StopwordsIso => stopwords_iso::prepare(raw, options)?,
         SourceId::Wikidata => wikidata::prepare(raw, options)?,
@@ -225,7 +232,7 @@ mod tests {
     #[test]
     fn exposes_source_registry() {
         let sources = all_sources();
-        assert_eq!(sources.len(), 5);
+        assert_eq!(sources.len(), 6);
         assert_eq!(source_definition(SourceId::Scowl).id.as_str(), "scowl");
     }
 }
