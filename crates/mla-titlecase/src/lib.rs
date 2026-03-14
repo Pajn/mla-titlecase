@@ -1,19 +1,45 @@
-//! Core library crate for MLA-style title casing.
+//! MLA-style title casing for Rust.
 //!
-//! The initial scaffold keeps the crate buildable while the rule engine,
-//! plugin support, and public API are added in later commits.
+//! The library keeps a built-in MLA rule engine as the authoritative source of
+//! small-word behavior. Optional external lexicons can add canonical spellings,
+//! protected words, and word-set heuristics without changing the default MLA
+//! semantics.
+//!
+//! # Examples
+//!
+//! ```
+//! use mla_titlecase::titlecase_mla;
+//!
+//! assert_eq!(titlecase_mla("the wind in the willows"), "The Wind in the Willows");
+//! ```
 
-/// Returns the package version for quick smoke testing during early scaffolding.
-pub const fn version() -> &'static str {
-    env!("CARGO_PKG_VERSION")
+pub mod config;
+pub mod error;
+pub mod lexicon;
+pub mod util;
+
+mod casing;
+mod classify;
+mod context;
+mod rules;
+mod titlecase;
+mod token;
+mod tokenizer;
+
+pub use config::{
+    HyphenStyle, LocaleProfile, NameParticlePolicy, SmallWordPolicy, TitleCaseOptions,
+};
+pub use error::{Error, Result};
+pub use lexicon::ExternalLexicons;
+
+/// Converts `input` to MLA-style title case using the default options.
+#[must_use]
+pub fn titlecase_mla(input: &str) -> String {
+    titlecase::titlecase_mla(input)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::version;
-
-    #[test]
-    fn exposes_package_version() {
-        assert!(!version().is_empty());
-    }
+/// Converts `input` to MLA-style title case using explicit options.
+#[must_use]
+pub fn titlecase_with_options(input: &str, options: &TitleCaseOptions<'_>) -> String {
+    titlecase::titlecase_with_options(input, options)
 }
