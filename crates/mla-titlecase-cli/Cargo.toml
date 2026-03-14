@@ -9,6 +9,7 @@ description = "CLI for building and inspecting mla-titlecase lexicons"
 [[bin]]
 name = "mla-titlecase"
 path = "src/main.rs"
+doc = false
 
 [dependencies]
 anyhow.workspace = true

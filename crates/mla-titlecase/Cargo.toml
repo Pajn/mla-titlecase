@@ -6,6 +6,33 @@ rust-version.workspace = true
 license.workspace = true
 description = "MLA title casing library"
 
+[[example]]
+name = "basic"
+path = "../../examples/basic.rs"
+
+[[example]]
+name = "with_plugins_json"
+path = "../../examples/with_plugins_json.rs"
+
+[[example]]
+name = "with_plugins_fst"
+path = "../../examples/with_plugins_fst.rs"
+
+[[bench]]
+name = "titlecase"
+harness = false
+path = "../../benches/titlecase.rs"
+
+[[bench]]
+name = "lexicon_lookup"
+harness = false
+path = "../../benches/lexicon_lookup.rs"
+
+[[bench]]
+name = "plugin_load"
+harness = false
+path = "../../benches/plugin_load.rs"
+
 [dependencies]
 fst.workspace = true
 serde.workspace = true
@@ -13,6 +40,7 @@ serde_json.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
+criterion.workspace = true
 tempfile.workspace = true
 
 [lints]
