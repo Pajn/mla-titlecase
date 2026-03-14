@@ -1,0 +1,44 @@
+name: reusable-rust-validate
+
+on:
+  workflow_call:
+    inputs:
+      toolchain:
+        required: false
+        type: string
+        default: stable
+      run_examples:
+        required: false
+        type: boolean
+        default: true
+      run_docs:
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ inputs.toolchain }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - run: cargo fmt --all -- --check
+
+      - run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - run: cargo test --workspace --all-features
+
+      - if: ${{ inputs.run_examples }}
+        run: cargo test -p mla-titlecase --examples
+
+      - if: ${{ inputs.run_docs }}
+        run: cargo doc --workspace --all-features --no-deps

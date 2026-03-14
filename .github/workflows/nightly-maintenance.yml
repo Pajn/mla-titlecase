@@ -1,0 +1,31 @@
+name: nightly-maintenance
+
+on:
+  schedule:
+    - cron: "19 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-maintenance
+  cancel-in-progress: true
+
+jobs:
+  maintenance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - run: cargo update --workspace
+
+      - run: cargo test --workspace --all-features
+
+      - run: cargo bench --bench plugin_load -- --sample-size 10
