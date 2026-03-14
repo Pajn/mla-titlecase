@@ -1,6 +1,18 @@
-//! Command-line entry point for the `mla-titlecase` workspace.
+//! Command-line interface for `mla-titlecase`.
 
-/// Starts the placeholder CLI.
+mod checksum;
+mod cli;
+mod cmd;
+mod error;
+mod fsutil;
+mod manifest;
+mod normalize;
+mod plugin_build;
+mod sources;
+
 fn main() {
-    println!("mla-titlecase CLI scaffolding is in place.");
+    if let Err(error) = cli::run() {
+        eprintln!("error: {error}");
+        std::process::exit(1);
+    }
 }
