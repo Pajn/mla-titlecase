@@ -1,0 +1,22 @@
+{
+  "query": "given-names:Josiah",
+  "search_url": "https://pub.orcid.org/v3.0/search/?q=given-names%3AJosiah&rows=2",
+  "people": [
+    {
+      "orcid": "0000-0002-1825-0097",
+      "person": {
+        "name": {
+          "given-names": { "value": "Josiah" },
+          "family-name": { "value": "Carberry" }
+        },
+        "other-names": {
+          "other-name": [
+            { "content": "Josiah Stinkney Carberry" },
+            { "content": "J. Carberry" },
+            { "content": "Carberry" }
+          ]
+        }
+      }
+    }
+  ]
+}
