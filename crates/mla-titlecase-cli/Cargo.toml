@@ -1,0 +1,18 @@
+[package]
+name = "mla-titlecase-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "CLI for building and inspecting mla-titlecase lexicons"
+
+[[bin]]
+name = "mla-titlecase"
+path = "src/main.rs"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+
+[lints]
+workspace = true

@@ -1,0 +1,13 @@
+[package]
+name = "mla-titlecase"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "MLA title casing library"
+
+[dependencies]
+thiserror.workspace = true
+
+[lints]
+workspace = true
