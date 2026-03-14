@@ -45,6 +45,15 @@ pub(crate) enum OutputFormat {
     Fst,
 }
 
+#[derive(Debug, Clone, Copy, ValueEnum, PartialEq, Eq)]
+pub(crate) enum PreparePayloadKind {
+    WordSet,
+    CanonicalMap,
+    MultiwordMap,
+    RankedWords,
+    ProtectedSpellings,
+}
+
 #[derive(Debug, Args)]
 pub(crate) struct ShowLicenseArgs {
     #[arg(value_enum)]
@@ -64,6 +73,12 @@ pub(crate) struct FetchArgs {
     #[arg(long)]
     pub(crate) from_file: Option<PathBuf>,
     #[arg(long)]
+    pub(crate) query: Option<String>,
+    #[arg(long)]
+    pub(crate) language: Option<String>,
+    #[arg(long)]
+    pub(crate) limit: Option<usize>,
+    #[arg(long)]
     pub(crate) acknowledge_cc_by_sa: bool,
 }
 
@@ -79,6 +94,8 @@ pub(crate) struct PrepareArgs {
     pub(crate) output: PathBuf,
     #[arg(long)]
     pub(crate) source_url: Option<String>,
+    #[arg(long, value_enum)]
+    pub(crate) payload_kind: Option<PreparePayloadKind>,
     #[arg(long)]
     pub(crate) acknowledge_cc_by_sa: bool,
 }

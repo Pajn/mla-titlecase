@@ -18,7 +18,12 @@ pub(crate) fn run(args: PrepareArgs) -> Result<()> {
         args.source_url.clone(),
         file_sha256_hex(&args.input)?,
     );
-    let prepared = sources::prepare_source(args.source, &raw, context)?;
+    let prepared = sources::prepare_source(
+        args.source,
+        &raw,
+        context,
+        sources::PrepareOptions { payload_kind: args.payload_kind },
+    )?;
     save_json(&args.output, &prepared)?;
 
     println!(

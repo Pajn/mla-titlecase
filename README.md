@@ -60,6 +60,22 @@ cargo run -p mla-titlecase-cli -- \
   --output /tmp/stopwords.mlatl
 ```
 
+For authority-style sources such as Wikidata, choose the payload shape during `prepare`:
+
+```bash
+cargo run -p mla-titlecase-cli -- \
+  lexicon fetch wikidata \
+  --output /tmp/wikidata.json \
+  --language en \
+  --limit 250
+
+cargo run -p mla-titlecase-cli -- \
+  lexicon prepare wikidata \
+  --input /tmp/wikidata.json \
+  --output /tmp/wikidata-prepared.json \
+  --payload-kind multiword-map
+```
+
 Inspect or diff plugins:
 
 ```bash
@@ -80,6 +96,7 @@ The CLI preserves source metadata and notice text in prepared/plugin artifacts.
 
 - `scowl` is the recommended general English membership source.
 - `stopwords-iso` is convenient heuristic input, but it does not define MLA semantics.
+- `wikidata` is the first optional authority-style source and defaults to a live CC0 SPARQL query.
 - `wordfreq` is opt-in and requires `--acknowledge-cc-by-sa`.
 
 ## Docs index
