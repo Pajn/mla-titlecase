@@ -1,3 +1,45 @@
-# MLA Rules
+# MLA rules implemented
 
-This file documents the MLA-specific behaviors implemented by the library.
+The library implements a pragmatic MLA-focused title-casing engine.
+
+## Small words
+
+The built-in small-word list includes common articles, conjunctions, and prepositions such as `a`, `an`, `and`, `as`, `at`, `by`, `for`, `in`, `of`, `on`, `the`, `to`, and `with`.
+
+By default these words are lowercased only when they appear internally.
+
+## First and last significant words
+
+The first and last significant words are always capitalized, even if they are normally treated as small words.
+
+## Colon behavior
+
+When `capitalize_after_colon` is enabled (the default), the first significant word after a colon is capitalized.
+
+## Hyphen behavior
+
+`HyphenStyle::MlaLike` applies the same MLA logic to each hyphen-separated segment.
+
+`HyphenStyle::CapitalizeBoth` forces capitalization of each segment in a hyphenated compound.
+
+## Acronyms and dotted abbreviations
+
+- all-caps acronyms such as `NASA` are preserved
+- dotted initialisms such as `u.s.a.` normalize to `U.S.A.`
+- lowercase dotted abbreviations like `e.g.` and `i.e.` remain lowercase
+
+## Protected spellings
+
+The engine preserves:
+
+- user-supplied protected words
+- built-in spellings like `GitHub`, `iPhone`, and `macOS`
+- external protected-spelling plugins
+
+## Name particles
+
+When `NameParticlePolicy::Heuristic` is enabled, common particles such as `van`, `de`, and `von` stay lowercase inside likely personal-name runs.
+
+## Known boundaries
+
+This crate is intentionally MLA-centric. It does not try to become a full named-entity recognizer or a multi-style-guide formatter.

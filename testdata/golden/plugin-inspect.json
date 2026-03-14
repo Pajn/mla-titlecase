@@ -1,0 +1,10 @@
+{
+  "format": "json",
+  "payload_kind": "word-set",
+  "entry_count": 4,
+  "source_id": "stopwords-iso",
+  "source_version": null,
+  "license_summary": "MIT-like upstream terms; check the current stopwords-iso repository",
+  "checksum": "example-checksum",
+  "notice_present": true
+}
