@@ -37,6 +37,13 @@ Payload encoding strategy:
 - `RankedWords`: `fst::Map<word, rank>`
 - `CanonicalMap` / `ProtectedSpellings`: `fst::Map<word, value_offset>` plus a string table
 
+At runtime, the library supports two FST load paths:
+
+- full decode via `fst_store::load_fst_plugin` when you need the materialized `LexiconPlugin`
+- direct-query runtime loading via `ExternalLexicons::register_fst_plugin` or `ExternalLexicons::register_mmap_fst_plugin`
+
+The mmap-backed path keeps the FST bytes on disk-backed pages instead of rehydrating the payload into heap-owned maps and sets.
+
 ## Compatibility and validation
 
 - schema version mismatches fail explicitly

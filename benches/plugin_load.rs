@@ -25,6 +25,9 @@ fn bench_plugin_load(c: &mut Criterion) {
     c.bench_function("load_fst_plugin_large_word_set", |b| {
         b.iter(|| fst_store::load_fst_plugin(&fst_path).expect("load fst plugin"))
     });
+    c.bench_function("mmap_fst_plugin_large_word_set", |b| {
+        b.iter(|| fst_store::mmap_fst_plugin(&fst_path).expect("mmap fst plugin"))
+    });
 }
 
 fn synthetic_word(index: usize) -> String {
