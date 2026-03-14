@@ -63,6 +63,8 @@ fn fetches_from_local_fixture_and_writes_manifest() {
 #[test]
 fn prepare_build_inspect_and_diff_plugins() {
     let temp = tempdir().unwrap();
+    let raw = temp.path().join("raw.json");
+    let raw_manifest = temp.path().join("raw.json.manifest.json");
     let prepared = temp.path().join("prepared.json");
     let json_plugin = temp.path().join("plugin.json");
     let fst_plugin = temp.path().join("plugin.mlatl");
@@ -71,16 +73,38 @@ fn prepare_build_inspect_and_diff_plugins() {
         .unwrap()
         .args([
             "lexicon",
+            "fetch",
+            "stopwords-iso",
+            "--from-file",
+            fixture("stopwords-en.json").to_str().unwrap(),
+            "--output",
+            raw.to_str().unwrap(),
+            "--manifest",
+            raw_manifest.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    Command::cargo_bin("mla-titlecase")
+        .unwrap()
+        .args([
+            "lexicon",
             "prepare",
             "stopwords-iso",
             "--input",
-            fixture("stopwords-en.json").to_str().unwrap(),
+            raw.to_str().unwrap(),
             "--output",
             prepared.to_str().unwrap(),
         ])
         .assert()
         .success()
-        .stdout(predicate::str::contains("prepared 4 stopwords-iso entries"));
+        .stdout(predicate::str::contains("prepared 4 stopwords-iso entries"))
+        .stdout(predicate::str::contains("4 input records -> 4 normalized entries"));
+
+    let prepared_json: Value = serde_json::from_slice(&std::fs::read(&prepared).unwrap()).unwrap();
+    assert_eq!(prepared_json["metadata"]["source_id"], "stopwords-iso");
+    assert_eq!(prepared_json["report"]["input_records"], 4);
+    assert!(prepared_json["metadata"]["source_url"].as_str().unwrap().starts_with("file://"));
 
     Command::cargo_bin("mla-titlecase")
         .unwrap()

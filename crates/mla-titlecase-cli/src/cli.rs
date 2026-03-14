@@ -74,6 +74,8 @@ pub(crate) struct PrepareArgs {
     #[arg(long)]
     pub(crate) input: PathBuf,
     #[arg(long)]
+    pub(crate) manifest: Option<PathBuf>,
+    #[arg(long)]
     pub(crate) output: PathBuf,
     #[arg(long)]
     pub(crate) source_url: Option<String>,
