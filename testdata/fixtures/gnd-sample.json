@@ -1,0 +1,30 @@
+{
+  "member": [
+    {
+      "preferredName": "Beethoven, Ludwig van",
+      "preferredNameEntityForThePerson": {
+        "forename": ["Ludwig"],
+        "prefix": ["van"],
+        "surname": ["Beethoven"]
+      }
+    },
+    {
+      "preferredName": "Beethoven, Maria Josepha van",
+      "preferredNameEntityForThePerson": {
+        "forename": ["Maria Josepha"],
+        "prefix": ["van"],
+        "surname": ["Beethoven"]
+      },
+      "variantName": ["Poll, Maria Josepha"],
+      "variantNameEntityForThePerson": [
+        {
+          "forename": ["Maria Josepha"],
+          "surname": ["Poll"]
+        }
+      ]
+    },
+    {
+      "preferredName": "Bayreuth"
+    }
+  ]
+}
