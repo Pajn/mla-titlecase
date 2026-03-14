@@ -36,9 +36,17 @@ The engine preserves:
 - built-in spellings like `GitHub`, `iPhone`, and `macOS`
 - external protected-spelling plugins
 
+## Multiword external mappings
+
+When callers load `MultiwordMap` plugins, the engine attempts longest-match phrase lookups across whitespace-separated word runs before it falls back to single-token external maps.
+
+That lets optional plugins preserve forms such as `New York City` without changing the built-in MLA semantics for callers who do not load any external data.
+
 ## Name particles
 
 When `NameParticlePolicy::Heuristic` is enabled, common particles such as `van`, `de`, and `von` stay lowercase inside likely personal-name runs.
+
+Locale profiles widen that heuristic carefully for supported languages such as Dutch, French, German, Italian, Spanish, and Turkish while keeping the default English MLA path unchanged.
 
 ## Known boundaries
 

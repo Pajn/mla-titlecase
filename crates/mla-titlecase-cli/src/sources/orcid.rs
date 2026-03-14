@@ -8,9 +8,12 @@ use crate::{
     cli::PreparePayloadKind,
     error::{CliError, Result},
     normalize::{
-        canonical_map_payload, multiword_map_payload, protected_spellings_payload, NormalizedPayload,
+        canonical_map_payload, multiword_map_payload, protected_spellings_payload,
+        NormalizedPayload,
     },
-    sources::{payload_kind_name, FetchOptions, PrepareOptions, ResolvedSource, SourceDefinition, SourceId},
+    sources::{
+        payload_kind_name, FetchOptions, PrepareOptions, ResolvedSource, SourceDefinition, SourceId,
+    },
 };
 
 const SEARCH_ENDPOINT: &str = "https://pub.orcid.org/v3.0/search/";
@@ -30,7 +33,10 @@ pub(crate) fn definition() -> SourceDefinition {
     }
 }
 
-pub(crate) fn fetch(client: &reqwest::blocking::Client, options: &FetchOptions) -> Result<ResolvedSource> {
+pub(crate) fn fetch(
+    client: &reqwest::blocking::Client,
+    options: &FetchOptions,
+) -> Result<ResolvedSource> {
     let query = options.query.as_deref().unwrap_or(DEFAULT_QUERY);
     let limit = options.limit.unwrap_or(DEFAULT_LIMIT);
 
@@ -288,18 +294,17 @@ mod tests {
 
     #[test]
     fn prepares_multiword_payloads() {
-        let payload =
-            prepare(FIXTURE, PrepareOptions { payload_kind: Some(PreparePayloadKind::MultiwordMap) })
-                .unwrap();
+        let payload = prepare(
+            FIXTURE,
+            PrepareOptions { payload_kind: Some(PreparePayloadKind::MultiwordMap) },
+        )
+        .unwrap();
 
         assert_eq!(
             payload.payload,
             PluginPayload::MultiwordMap {
                 entries: vec![
-                    MapEntry {
-                        key: "j. carberry".to_string(),
-                        value: "J. Carberry".to_string(),
-                    },
+                    MapEntry { key: "j. carberry".to_string(), value: "J. Carberry".to_string() },
                     MapEntry {
                         key: "josiah carberry".to_string(),
                         value: "Josiah Carberry".to_string(),
@@ -315,14 +320,19 @@ mod tests {
 
     #[test]
     fn prepares_single_word_payloads() {
-        let payload =
-            prepare(FIXTURE, PrepareOptions { payload_kind: Some(PreparePayloadKind::CanonicalMap) })
-                .unwrap();
+        let payload = prepare(
+            FIXTURE,
+            PrepareOptions { payload_kind: Some(PreparePayloadKind::CanonicalMap) },
+        )
+        .unwrap();
 
         assert_eq!(
             payload.payload,
             PluginPayload::CanonicalMap {
-                entries: vec![MapEntry { key: "carberry".to_string(), value: "Carberry".to_string() }],
+                entries: vec![MapEntry {
+                    key: "carberry".to_string(),
+                    value: "Carberry".to_string()
+                }],
             }
         );
     }

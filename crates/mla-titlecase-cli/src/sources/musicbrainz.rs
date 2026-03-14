@@ -7,9 +7,12 @@ use crate::{
     cli::PreparePayloadKind,
     error::{CliError, Result},
     normalize::{
-        canonical_map_payload, multiword_map_payload, protected_spellings_payload, NormalizedPayload,
+        canonical_map_payload, multiword_map_payload, protected_spellings_payload,
+        NormalizedPayload,
     },
-    sources::{payload_kind_name, FetchOptions, PrepareOptions, ResolvedSource, SourceDefinition, SourceId},
+    sources::{
+        payload_kind_name, FetchOptions, PrepareOptions, ResolvedSource, SourceDefinition, SourceId,
+    },
 };
 
 const ENDPOINT: &str = "https://musicbrainz.org/ws/2/artist/";
@@ -29,7 +32,10 @@ pub(crate) fn definition() -> SourceDefinition {
     }
 }
 
-pub(crate) fn fetch(client: &reqwest::blocking::Client, options: &FetchOptions) -> Result<ResolvedSource> {
+pub(crate) fn fetch(
+    client: &reqwest::blocking::Client,
+    options: &FetchOptions,
+) -> Result<ResolvedSource> {
     let query = options.query.as_deref().unwrap_or(DEFAULT_QUERY);
     let limit = options.limit.unwrap_or(DEFAULT_LIMIT);
     let response = client
@@ -69,7 +75,9 @@ pub(crate) fn prepare(raw: &[u8], options: PrepareOptions) -> Result<NormalizedP
     let mut payload = match requested_kind {
         PreparePayloadKind::CanonicalMap => canonical_map_payload(parsed.single_word_entries),
         PreparePayloadKind::MultiwordMap => multiword_map_payload(parsed.multiword_entries),
-        PreparePayloadKind::ProtectedSpellings => protected_spellings_payload(parsed.single_word_entries),
+        PreparePayloadKind::ProtectedSpellings => {
+            protected_spellings_payload(parsed.single_word_entries)
+        }
         _ => unreachable!("validated above"),
     };
     payload.report.ignored_records += parsed.ignored_records;
@@ -133,11 +141,15 @@ impl ArtistRecord {
         if let Some(name) = self.name.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
             surfaces.insert(name.to_string());
         }
-        if let Some(name) = self.sort_name.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+        if let Some(name) =
+            self.sort_name.as_deref().map(str::trim).filter(|value| !value.is_empty())
+        {
             surfaces.insert(name.to_string());
         }
         for alias in &self.aliases {
-            if let Some(name) = alias.name.as_deref().map(str::trim).filter(|value| !value.is_empty()) {
+            if let Some(name) =
+                alias.name.as_deref().map(str::trim).filter(|value| !value.is_empty())
+            {
                 surfaces.insert(name.to_string());
             }
         }
@@ -164,18 +176,17 @@ mod tests {
 
     #[test]
     fn prepares_multiword_payloads() {
-        let payload =
-            prepare(FIXTURE, PrepareOptions { payload_kind: Some(PreparePayloadKind::MultiwordMap) })
-                .unwrap();
+        let payload = prepare(
+            FIXTURE,
+            PrepareOptions { payload_kind: Some(PreparePayloadKind::MultiwordMap) },
+        )
+        .unwrap();
 
         assert_eq!(
             payload.payload,
             PluginPayload::MultiwordMap {
                 entries: vec![
-                    MapEntry {
-                        key: "dana owens".to_string(),
-                        value: "Dana Owens".to_string(),
-                    },
+                    MapEntry { key: "dana owens".to_string(), value: "Dana Owens".to_string() },
                     MapEntry {
                         key: "latifah, queen".to_string(),
                         value: "Latifah, Queen".to_string(),
