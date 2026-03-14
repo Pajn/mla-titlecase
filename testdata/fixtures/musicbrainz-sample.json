@@ -1,0 +1,20 @@
+{
+  "artists": [
+    {
+      "name": "Queen",
+      "sort-name": "Queen"
+    },
+    {
+      "name": "P!nk",
+      "sort-name": "P!nk"
+    },
+    {
+      "name": "Queen Latifah",
+      "sort-name": "Queen Latifah",
+      "aliases": [
+        { "name": "Latifah, Queen" },
+        { "name": "Dana Owens" }
+      ]
+    }
+  ]
+}
