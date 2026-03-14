@@ -1,6 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::util::normalize::lookup_key;
+use crate::{
+    plugin::{LexiconPlugin, PluginPayload},
+    util::normalize::lookup_key,
+    Result,
+};
 
 /// Additive external lexicon container.
 #[derive(Debug, Clone, Default)]
@@ -12,6 +16,23 @@ pub struct ExternalLexicons {
 }
 
 impl ExternalLexicons {
+    /// Registers a validated plugin into this lexicon container.
+    pub fn register_plugin(&mut self, plugin: &LexiconPlugin) -> Result<()> {
+        match &plugin.payload {
+            PluginPayload::WordSet { words } => self.add_word_set(words.iter().map(String::as_str)),
+            PluginPayload::CanonicalMap { entries } => self.add_canonical_map(
+                entries.iter().map(|entry| (entry.key.as_str(), entry.value.as_str())),
+            ),
+            PluginPayload::ProtectedSpellings { entries } => self.add_protected_spellings(
+                entries.iter().map(|entry| (entry.key.as_str(), entry.value.as_str())),
+            ),
+            PluginPayload::RankedWords { entries } => {
+                self.add_ranked_words(entries.iter().map(|entry| (entry.word.as_str(), entry.rank)))
+            }
+        }
+        Ok(())
+    }
+
     /// Adds a word-set lexicon matched case-insensitively.
     pub fn add_word_set<I, S>(&mut self, words: I)
     where
