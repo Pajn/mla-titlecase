@@ -15,6 +15,7 @@ The library is intentionally network-free. The CLI owns download concerns, sourc
 2. `context.rs` identifies first/last significant words, colon boundaries, and hyphen context.
 3. `rules.rs` applies MLA precedence rules.
 4. `casing.rs` preserves acronyms, dotted abbreviations, protected spellings, and mixed-case forms when configured.
+5. optional locale profiles and multiword external lexicons are consulted only when callers opt in through `TitleCaseOptions` or loaded plugins.
 
 ## Lexicon lookup precedence
 
@@ -22,7 +23,7 @@ Lookup stays deterministic:
 
 1. user-provided protected words
 2. built-in protected spellings and abbreviations
-3. external protected spellings and canonical maps
+3. external multiword maps, then external protected spellings and canonical maps
 4. built-in MLA small-word list
 5. opt-in external word sets only when `SmallWordPolicy::AlwaysLowercase` is chosen
 
@@ -42,5 +43,15 @@ The library includes explicit extension hooks for:
 
 - name-particle heuristics via `NameParticlePolicy`
 - locale-aware casing via `LocaleProfile`
+- phrase-level canonical overrides via `ExternalLexicons::add_multiword_map`
 
 Both remain opt-in and conservative in the current implementation.
+
+## CLI source flows
+
+The CLI now has two broad source families:
+
+- commit-pinned GitHub artifact sources such as `scowl`, `stopwords-iso`, and `wordfreq`
+- live authority-style API sources such as `wikidata`, `gnd`, `musicbrainz`, and `orcid`
+
+Authority-style sources preserve the exact request URL in the fetch manifest and use `prepare --payload-kind ...` to choose an appropriate plugin shape for the downloaded names.

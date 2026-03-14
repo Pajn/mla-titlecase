@@ -2,7 +2,8 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use mla_titlecase::{
-    titlecase_mla, titlecase_with_options, NameParticlePolicy, SmallWordPolicy, TitleCaseOptions,
+    titlecase_mla, titlecase_with_options, ExternalLexicons, LocaleProfile, NameParticlePolicy,
+    SmallWordPolicy, TitleCaseOptions,
 };
 
 const SHORT_TITLE: &str = "the wind in the willows";
@@ -43,6 +44,20 @@ fn bench_titlecase(c: &mut Criterion) {
                 black_box(titlecase_with_options(LONG_TITLE, &lowercase_options));
             }
         })
+    });
+
+    let dutch_options = TitleCaseOptions::with_locale(LocaleProfile::Dutch);
+    c.bench_function("titlecase_dutch_locale", |b| {
+        b.iter(|| {
+            black_box(titlecase_with_options("ijsselmeer and jan van der heijden", &dutch_options))
+        })
+    });
+
+    let mut lexicons = ExternalLexicons::default();
+    lexicons.add_multiword_map([("new york city", "New York City")]);
+    let phrase_options = TitleCaseOptions::with_external_lexicons(&lexicons);
+    c.bench_function("titlecase_multiword_external", |b| {
+        b.iter(|| black_box(titlecase_with_options("new york city stories", &phrase_options)))
     });
 }
 

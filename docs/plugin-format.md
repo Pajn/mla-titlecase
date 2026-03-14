@@ -17,6 +17,7 @@ Top-level fields:
 
 - `word-set`
 - `canonical-map`
+- `multiword-map`
 - `ranked-words`
 - `protected-spellings`
 
@@ -35,7 +36,7 @@ Payload encoding strategy:
 
 - `WordSet`: `fst::Set`
 - `RankedWords`: `fst::Map<word, rank>`
-- `CanonicalMap` / `ProtectedSpellings`: `fst::Map<word, value_offset>` plus a string table
+- `CanonicalMap` / `MultiwordMap` / `ProtectedSpellings`: `fst::Map<word, value_offset>` plus a string table
 
 At runtime, the library supports two FST load paths:
 
@@ -48,5 +49,6 @@ The mmap-backed path keeps the FST bytes on disk-backed pages instead of rehydra
 
 - schema version mismatches fail explicitly
 - duplicate or empty entries fail validation
+- `multiword-map` entries must contain at least one whitespace boundary in the lookup key
 - both JSON and FST loaders validate before registration
-- `inspect-plugin` reports format, payload kind, entry counts, and key metadata
+- `inspect-plugin` reports format, payload kind, entry counts, multiword entry counts, and key metadata
