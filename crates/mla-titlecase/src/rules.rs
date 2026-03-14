@@ -13,7 +13,7 @@ use crate::util::normalize::lookup_key;
 pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> String {
     let first = first_significant_word(tokens);
     let last = last_significant_word(tokens);
-    let mut output = String::new();
+    let mut output = String::with_capacity(tokens.iter().map(|token| token.text.len()).sum());
 
     for (index, token) in tokens.iter().enumerate() {
         if !token.is_word() {

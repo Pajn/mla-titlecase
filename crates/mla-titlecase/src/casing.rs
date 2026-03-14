@@ -5,8 +5,16 @@ pub(crate) fn lowercase_word(word: &str, _locale: LocaleProfile) -> String {
 }
 
 pub(crate) fn is_all_caps_acronym(word: &str) -> bool {
-    let letters: Vec<_> = word.chars().filter(|ch| ch.is_alphabetic()).collect();
-    letters.len() > 1 && letters.iter().all(|ch| ch.is_uppercase())
+    let mut letters = 0_usize;
+    for ch in word.chars() {
+        if ch.is_alphabetic() {
+            letters += 1;
+            if !ch.is_uppercase() {
+                return false;
+            }
+        }
+    }
+    letters > 1
 }
 
 pub(crate) fn is_dotted_abbreviation(word: &str) -> bool {

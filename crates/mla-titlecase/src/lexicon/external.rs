@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{HashMap, HashSet};
 
 use crate::{
     plugin::{LexiconPlugin, PluginPayload},
@@ -9,10 +9,10 @@ use crate::{
 /// Additive external lexicon container.
 #[derive(Debug, Clone, Default)]
 pub struct ExternalLexicons {
-    word_sets: Vec<BTreeSet<String>>,
-    canonical_maps: Vec<BTreeMap<String, String>>,
-    protected_maps: Vec<BTreeMap<String, String>>,
-    ranked_words: Vec<BTreeMap<String, u64>>,
+    word_sets: Vec<HashSet<String>>,
+    canonical_maps: Vec<HashMap<String, String>>,
+    protected_maps: Vec<HashMap<String, String>>,
+    ranked_words: Vec<HashMap<String, u64>>,
 }
 
 impl ExternalLexicons {
@@ -39,7 +39,7 @@ impl ExternalLexicons {
         I: IntoIterator<Item = S>,
         S: AsRef<str>,
     {
-        let mut set = BTreeSet::new();
+        let mut set = HashSet::new();
         for word in words {
             set.insert(lookup_key(word.as_ref()));
         }
@@ -53,7 +53,7 @@ impl ExternalLexicons {
         K: AsRef<str>,
         V: AsRef<str>,
     {
-        let mut map = BTreeMap::new();
+        let mut map = HashMap::new();
         for (key, value) in entries {
             map.insert(lookup_key(key.as_ref()), value.as_ref().to_string());
         }
@@ -67,7 +67,7 @@ impl ExternalLexicons {
         K: AsRef<str>,
         V: AsRef<str>,
     {
-        let mut map = BTreeMap::new();
+        let mut map = HashMap::new();
         for (key, value) in entries {
             map.insert(lookup_key(key.as_ref()), value.as_ref().to_string());
         }
@@ -80,7 +80,7 @@ impl ExternalLexicons {
         I: IntoIterator<Item = (S, u64)>,
         S: AsRef<str>,
     {
-        let mut map = BTreeMap::new();
+        let mut map = HashMap::new();
         for (word, rank) in entries {
             map.insert(lookup_key(word.as_ref()), rank);
         }
