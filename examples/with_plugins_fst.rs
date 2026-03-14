@@ -18,10 +18,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     let path = std::env::temp_dir()
         .join(format!("mla-titlecase-fst-example-{}.mlatl", std::process::id()));
     fst_store::save_fst_plugin(&path, &plugin)?;
-    let loaded = fst_store::load_fst_plugin(&path)?;
 
     let mut external = ExternalLexicons::default();
-    loaded.register_into(&mut external)?;
+    external.register_mmap_fst_plugin(&path)?;
     let options = TitleCaseOptions::with_external_lexicons(&external);
 
     println!("{}", titlecase_with_options("postgres for rust developers", &options));
