@@ -60,6 +60,10 @@ fn diff_payloads(
             PluginPayload::CanonicalMap { entries: right },
         )
         | (
+            PluginPayload::MultiwordMap { entries: left },
+            PluginPayload::MultiwordMap { entries: right },
+        )
+        | (
             PluginPayload::ProtectedSpellings { entries: left },
             PluginPayload::ProtectedSpellings { entries: right },
         ) => diff_maps(

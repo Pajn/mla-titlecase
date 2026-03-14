@@ -10,6 +10,7 @@ struct PluginSummary {
     format: &'static str,
     payload_kind: mla_titlecase::PluginPayloadKind,
     entry_count: usize,
+    multiword_entries: usize,
     source_id: String,
     source_version: Option<String>,
     license_summary: String,
@@ -23,6 +24,7 @@ pub(crate) fn run(args: InspectPluginArgs) -> Result<()> {
         format,
         payload_kind: plugin.payload_kind(),
         entry_count: plugin.payload.len(),
+        multiword_entries: payload_multiword_entries(&plugin.payload),
         source_id: plugin.metadata.source_id.clone(),
         source_version: plugin.metadata.source_version.clone(),
         license_summary: plugin.metadata.license_summary.clone(),
@@ -36,6 +38,7 @@ pub(crate) fn run(args: InspectPluginArgs) -> Result<()> {
         println!("format: {}", summary.format);
         println!("payload-kind: {:?}", summary.payload_kind);
         println!("entries: {}", summary.entry_count);
+        println!("multiword-entries: {}", summary.multiword_entries);
         println!("source-id: {}", summary.source_id);
         if let Some(version) = summary.source_version {
             println!("source-version: {version}");
@@ -47,6 +50,13 @@ pub(crate) fn run(args: InspectPluginArgs) -> Result<()> {
         println!("notice-present: {}", summary.notice_present);
     }
     Ok(())
+}
+
+fn payload_multiword_entries(payload: &mla_titlecase::PluginPayload) -> usize {
+    match payload {
+        mla_titlecase::PluginPayload::MultiwordMap { entries } => entries.len(),
+        _ => 0,
+    }
 }
 
 pub(crate) fn load_plugin(

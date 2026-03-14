@@ -105,6 +105,8 @@ pub enum PluginPayloadKind {
     WordSet,
     /// Canonical spellings keyed by lowercase lookup keys.
     CanonicalMap,
+    /// Canonical spellings keyed by normalized multiword phrases.
+    MultiwordMap,
     /// Ranked or commonness-ordered words.
     RankedWords,
     /// Protected spellings keyed by lowercase lookup keys.
@@ -116,8 +118,9 @@ impl PluginPayloadKind {
         match self {
             Self::WordSet => 1,
             Self::CanonicalMap => 2,
-            Self::RankedWords => 3,
-            Self::ProtectedSpellings => 4,
+            Self::MultiwordMap => 3,
+            Self::RankedWords => 4,
+            Self::ProtectedSpellings => 5,
         }
     }
 
@@ -125,8 +128,9 @@ impl PluginPayloadKind {
         match tag {
             1 => Ok(Self::WordSet),
             2 => Ok(Self::CanonicalMap),
-            3 => Ok(Self::RankedWords),
-            4 => Ok(Self::ProtectedSpellings),
+            3 => Ok(Self::MultiwordMap),
+            4 => Ok(Self::RankedWords),
+            5 => Ok(Self::ProtectedSpellings),
             _ => Err(Error::InvalidData(format!("unknown plugin payload tag {tag}"))),
         }
     }
@@ -164,6 +168,11 @@ pub enum PluginPayload {
         /// Stored key/value entries.
         entries: Vec<MapEntry>,
     },
+    /// Canonical spellings keyed by normalized multiword phrases.
+    MultiwordMap {
+        /// Stored key/value entries.
+        entries: Vec<MapEntry>,
+    },
     /// Ranked words keyed by lowercase lookup keys.
     RankedWords {
         /// Stored ranked entries.
@@ -183,6 +192,7 @@ impl PluginPayload {
         match self {
             Self::WordSet { .. } => PluginPayloadKind::WordSet,
             Self::CanonicalMap { .. } => PluginPayloadKind::CanonicalMap,
+            Self::MultiwordMap { .. } => PluginPayloadKind::MultiwordMap,
             Self::RankedWords { .. } => PluginPayloadKind::RankedWords,
             Self::ProtectedSpellings { .. } => PluginPayloadKind::ProtectedSpellings,
         }
@@ -193,7 +203,9 @@ impl PluginPayload {
     pub fn len(&self) -> usize {
         match self {
             Self::WordSet { words } => words.len(),
-            Self::CanonicalMap { entries } | Self::ProtectedSpellings { entries } => entries.len(),
+            Self::CanonicalMap { entries }
+            | Self::MultiwordMap { entries }
+            | Self::ProtectedSpellings { entries } => entries.len(),
             Self::RankedWords { entries } => entries.len(),
         }
     }
@@ -207,9 +219,8 @@ impl PluginPayload {
     pub(crate) fn validate(&self) -> Result<()> {
         match self {
             Self::WordSet { words } => validate_words(words),
-            Self::CanonicalMap { entries } | Self::ProtectedSpellings { entries } => {
-                validate_map_entries(entries)
-            }
+            Self::CanonicalMap { entries } | Self::ProtectedSpellings { entries } => validate_map_entries(entries),
+            Self::MultiwordMap { entries } => validate_multiword_entries(entries),
             Self::RankedWords { entries } => validate_ranked_entries(entries),
         }
     }
@@ -240,6 +251,18 @@ fn validate_map_entries(entries: &[MapEntry]) -> Result<()> {
         }
         if !seen.insert(key) {
             return Err(Error::InvalidData("map entries must be unique".to_string()));
+        }
+    }
+    Ok(())
+}
+
+fn validate_multiword_entries(entries: &[MapEntry]) -> Result<()> {
+    validate_map_entries(entries)?;
+    for entry in entries {
+        if !entry.key.contains(' ') {
+            return Err(Error::InvalidData(
+                "multiword-map entries require keys containing at least one space".to_string(),
+            ));
         }
     }
     Ok(())
@@ -297,6 +320,21 @@ mod tests {
             metadata: PluginMetadata::new("fixture", "MIT"),
             payload: PluginPayload::RankedWords {
                 entries: vec![RankedEntry { word: "common".to_string(), rank: 7 }],
+            },
+        };
+
+        assert!(plugin.validate().is_ok());
+    }
+
+    #[test]
+    fn validates_multiword_entries() {
+        let plugin = LexiconPlugin {
+            metadata: PluginMetadata::new("fixture", "MIT"),
+            payload: PluginPayload::MultiwordMap {
+                entries: vec![MapEntry {
+                    key: "new york city".to_string(),
+                    value: "New York City".to_string(),
+                }],
             },
         };
 

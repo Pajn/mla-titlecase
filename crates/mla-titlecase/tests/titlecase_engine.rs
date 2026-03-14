@@ -46,6 +46,7 @@ fn preserves_protected_words_and_mixed_case() {
 fn supports_additive_external_lexicons() {
     let mut lexicons = ExternalLexicons::default();
     lexicons.add_canonical_map([("postgres", "Postgres")]);
+    lexicons.add_multiword_map([("new york city", "New York City")]);
     lexicons.add_protected_spellings([("copilot", "Copilot")]);
     lexicons.add_word_set(["amid"]);
 
@@ -58,6 +59,10 @@ fn supports_additive_external_lexicons() {
     assert_eq!(
         titlecase_with_options("copilot amid postgres updates", &options),
         "Copilot amid Postgres Updates"
+    );
+    assert_eq!(
+        titlecase_with_options("new york city stories", &options),
+        "New York City Stories"
     );
 }
 

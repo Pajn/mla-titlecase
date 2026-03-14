@@ -15,9 +15,20 @@ pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> Str
     let last = last_significant_word(tokens);
     let mut output = String::with_capacity(tokens.iter().map(|token| token.text.len()).sum());
 
-    for (index, token) in tokens.iter().enumerate() {
+    let mut index = 0_usize;
+    while index < tokens.len() {
+        let token = &tokens[index];
         if !token.is_word() {
             output.push_str(token.text);
+            index += 1;
+            continue;
+        }
+
+        if let Some((end_index, canonical_phrase)) =
+            options.external_lexicons.and_then(|lexicons| lexicons.multiword_spelling(tokens, index))
+        {
+            output.push_str(canonical_phrase);
+            index = end_index + 1;
             continue;
         }
 
@@ -36,16 +47,19 @@ pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> Str
             } else {
                 output.push_str(protected);
             }
+            index += 1;
             continue;
         }
 
         if should_force_lowercase(&key, should_capitalize, tokens, index, options) {
             output.push_str(&lowercase_word(token.text, options.locale));
+            index += 1;
             continue;
         }
 
         if let Some(abbreviation) = abbreviation_spelling(&key) {
             output.push_str(abbreviation);
+            index += 1;
             continue;
         }
 
@@ -53,6 +67,7 @@ pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> Str
             options.external_lexicons.and_then(|lexicons| lexicons.canonical_spelling(token.text))
         {
             output.push_str(canonical);
+            index += 1;
             continue;
         }
 
@@ -62,10 +77,12 @@ pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> Str
             && likely_name_particle_context(tokens, index)
         {
             output.push_str(&lowercase_word(token.text, options.locale));
+            index += 1;
             continue;
         }
 
         output.push_str(&style_word(token.text, true, options));
+        index += 1;
     }
 
     output

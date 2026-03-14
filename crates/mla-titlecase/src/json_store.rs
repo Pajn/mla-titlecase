@@ -25,7 +25,7 @@ mod tests {
 
     use crate::{
         json_store::{load_json_plugin, save_json_plugin},
-        plugin::{LexiconPlugin, PluginMetadata, PluginPayload},
+        plugin::{LexiconPlugin, MapEntry, PluginMetadata, PluginPayload},
     };
 
     #[test]
@@ -34,6 +34,26 @@ mod tests {
             metadata: PluginMetadata::new("fixture", "MIT"),
             payload: PluginPayload::WordSet {
                 words: vec!["alpha".to_string(), "beta".to_string()],
+            },
+        };
+        let tempdir = tempdir().unwrap();
+        let path = tempdir.path().join("plugin.json");
+
+        save_json_plugin(&path, &plugin).unwrap();
+        let loaded = load_json_plugin(&path).unwrap();
+
+        assert_eq!(loaded, plugin);
+    }
+
+    #[test]
+    fn round_trips_multiword_json_plugins() {
+        let plugin = LexiconPlugin {
+            metadata: PluginMetadata::new("fixture", "MIT"),
+            payload: PluginPayload::MultiwordMap {
+                entries: vec![MapEntry {
+                    key: "new york city".to_string(),
+                    value: "New York City".to_string(),
+                }],
             },
         };
         let tempdir = tempdir().unwrap();

@@ -6,6 +6,7 @@ use std::{
 use crate::{
     fst_store::{mmap_fst_plugin, open_fst_runtime_plugin, FstRuntimePlugin},
     plugin::{LexiconPlugin, PluginPayload},
+    token::{Token, TokenKind},
     util::normalize::lookup_key,
     Result,
 };
@@ -15,6 +16,7 @@ use crate::{
 pub struct ExternalLexicons {
     word_sets: Vec<WordSetBackend>,
     canonical_maps: Vec<MapBackend>,
+    multiword_maps: Vec<MapBackend>,
     protected_maps: Vec<MapBackend>,
     ranked_words: Vec<RankedBackend>,
 }
@@ -43,6 +45,9 @@ impl ExternalLexicons {
         match &plugin.payload {
             PluginPayload::WordSet { words } => self.add_word_set(words.iter().map(String::as_str)),
             PluginPayload::CanonicalMap { entries } => self.add_canonical_map(
+                entries.iter().map(|entry| (entry.key.as_str(), entry.value.as_str())),
+            ),
+            PluginPayload::MultiwordMap { entries } => self.add_multiword_map(
                 entries.iter().map(|entry| (entry.key.as_str(), entry.value.as_str())),
             ),
             PluginPayload::ProtectedSpellings { entries } => self.add_protected_spellings(
@@ -92,6 +97,20 @@ impl ExternalLexicons {
         self.canonical_maps.push(MapBackend::Heap(map));
     }
 
+    /// Adds a multiword canonical spelling map.
+    pub fn add_multiword_map<I, K, V>(&mut self, entries: I)
+    where
+        I: IntoIterator<Item = (K, V)>,
+        K: AsRef<str>,
+        V: AsRef<str>,
+    {
+        let mut map = HashMap::new();
+        for (key, value) in entries {
+            map.insert(normalized_phrase(key.as_ref()), value.as_ref().to_string());
+        }
+        self.multiword_maps.push(MapBackend::Heap(map));
+    }
+
     /// Adds a protected-spelling map.
     pub fn add_protected_spellings<I, K, V>(&mut self, entries: I)
     where
@@ -127,6 +146,9 @@ impl ExternalLexicons {
             crate::PluginPayloadKind::CanonicalMap => {
                 self.canonical_maps.push(MapBackend::Fst(Box::new(plugin)))
             }
+            crate::PluginPayloadKind::MultiwordMap => {
+                self.multiword_maps.push(MapBackend::Fst(Box::new(plugin)))
+            }
             crate::PluginPayloadKind::ProtectedSpellings => {
                 self.protected_maps.push(MapBackend::Fst(Box::new(plugin)))
             }
@@ -153,6 +175,48 @@ impl ExternalLexicons {
         })
     }
 
+    pub(crate) fn multiword_spelling(&self, tokens: &[Token<'_>], start: usize) -> Option<(usize, &str)> {
+        if !tokens.get(start).is_some_and(|token| token.is_word()) {
+            return None;
+        }
+
+        let mut phrase = String::new();
+        let mut match_result = None;
+        let mut index = start;
+        let mut words = 0_usize;
+
+        while let Some(token) = tokens.get(index) {
+            if !token.is_word() {
+                break;
+            }
+
+            if !phrase.is_empty() {
+                phrase.push(' ');
+            }
+            phrase.push_str(&lookup_key(token.text));
+            words += 1;
+
+            if let Some(value) = self.multiword_maps.iter().rev().find_map(|backend| match backend {
+                MapBackend::Heap(map) => map.get(&phrase).map(String::as_str),
+                MapBackend::Fst(plugin) => plugin.map_value(&phrase),
+            }) {
+                match_result = Some((index, value));
+            }
+
+            if words >= 8 {
+                break;
+            }
+
+            index += 1;
+            if !tokens.get(index).is_some_and(|token| token.kind == TokenKind::Whitespace) {
+                break;
+            }
+            index += 1;
+        }
+
+        match_result
+    }
+
     pub(crate) fn protected_spelling(&self, word: &str) -> Option<&str> {
         let key = lookup_key(word);
         self.protected_maps.iter().rev().find_map(|backend| match backend {
@@ -172,6 +236,10 @@ impl ExternalLexicons {
     }
 }
 
+fn normalized_phrase(value: &str) -> String {
+    value.split_whitespace().map(lookup_key).collect::<Vec<_>>().join(" ")
+}
+
 #[cfg(test)]
 mod tests {
     use tempfile::tempdir;
@@ -179,6 +247,7 @@ mod tests {
     use crate::{
         fst_store::save_fst_plugin,
         plugin::{LexiconPlugin, MapEntry, PluginMetadata, PluginPayload},
+        tokenizer::tokenize,
     };
 
     use super::ExternalLexicons;
@@ -195,6 +264,15 @@ mod tests {
         assert_eq!(lexicons.canonical_spelling("POSTGRES"), Some("Postgres"));
         assert_eq!(lexicons.protected_spelling("github"), Some("GitHub"));
         assert_eq!(lexicons.rank_of("common"), Some(42));
+    }
+
+    #[test]
+    fn queries_multiword_entries() {
+        let mut lexicons = ExternalLexicons::default();
+        lexicons.add_multiword_map([("new york city", "New York City")]);
+
+        let tokens = tokenize("new york city stories");
+        assert_eq!(lexicons.multiword_spelling(&tokens, 0), Some((4, "New York City")));
     }
 
     #[test]
