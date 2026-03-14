@@ -31,7 +31,15 @@ pub(crate) fn run(args: FetchArgs) -> Result<()> {
         }
     } else {
         let client = sources::github::client()?;
-        sources::fetch_default(args.source, &client)?
+        sources::fetch_default(
+            args.source,
+            &client,
+            &sources::FetchOptions {
+                query: args.query.clone(),
+                language: args.language.clone(),
+                limit: args.limit,
+            },
+        )?
     };
 
     if args.from_file.is_none() {

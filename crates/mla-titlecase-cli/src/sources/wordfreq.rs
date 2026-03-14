@@ -1,9 +1,10 @@
 use crate::{
+    cli::PreparePayloadKind,
     error::Result,
     normalize::{parse_wordfreq_msgpack, NormalizedPayload},
     sources::{
         github::{download_bytes, download_text, resolve_file},
-        ResolvedSource, SourceDefinition, SourceId,
+        require_payload_kind, PrepareOptions, ResolvedSource, SourceDefinition, SourceId,
     },
 };
 
@@ -40,6 +41,11 @@ pub(crate) fn fetch(client: &reqwest::blocking::Client) -> Result<ResolvedSource
     })
 }
 
-pub(crate) fn prepare(raw: &[u8]) -> Result<NormalizedPayload> {
+pub(crate) fn prepare(raw: &[u8], options: PrepareOptions) -> Result<NormalizedPayload> {
+    require_payload_kind(
+        SourceId::Wordfreq,
+        options.payload_kind,
+        PreparePayloadKind::RankedWords,
+    )?;
     parse_wordfreq_msgpack(raw)
 }

@@ -10,6 +10,7 @@ The repository does **not** commit fetched raw data or prepared outputs. End use
 | --- | --- | --- | --- |
 | `scowl` | `en-wl/wordlist:data/scowl-pre.txt` on `v2` | `WordSet` | Preserve the upstream `Copyright` notice |
 | `stopwords-iso` | `stopwords-iso/stopwords-en:stopwords-en.json` on `master` | `WordSet` | MIT license text is preserved in fetch metadata |
+| `wikidata` | live query to `query.wikidata.org/sparql` | `CanonicalMap`, `MultiwordMap`, or `ProtectedSpellings` | Structured data is CC0; the exact query URL is preserved in the fetch manifest |
 | `wordfreq` | `rspeer/wordfreq:wordfreq/data/small_en.msgpack.gz` on `master` | `RankedWords` | Requires `--acknowledge-cc-by-sa` and preserves `NOTICE.md` |
 
 `lexicon fetch` resolves each default artifact through the GitHub Contents API first. That gives the CLI a commit-pinned raw download URL plus the blob SHA, which is recorded as `source_version` in the fetch manifest and then carried into prepared/plugin metadata.
@@ -71,6 +72,46 @@ The CLI:
 - stores them as a `RankedWords` payload
 
 Because the upstream package includes CC-BY-SA-derived data and an explicit notice, the CLI requires `--acknowledge-cc-by-sa` for both `fetch` and `prepare`.
+
+## `wikidata`
+
+`wikidata` is the first optional authority-style source. Instead of downloading a fixed artifact from a Git repository, the CLI issues a live SPARQL query against `query.wikidata.org` and records the full resolved query URL in the fetch manifest.
+
+The default query targets a manageable slice of entity classes:
+
+- humans
+- organizations
+- creative works
+
+and supports:
+
+- `--language <tag>` to choose the label/alias language
+- `--limit <n>` to cap the live query size
+- `--query <sparql>` to override the built-in query entirely
+
+The raw SPARQL JSON can then be prepared into one of three plugin payloads:
+
+- `CanonicalMap` for single-token names with authoritative casing
+- `MultiwordMap` for multiword entities and aliases
+- `ProtectedSpellings` for single-token protected forms
+
+Example flow:
+
+```bash
+cargo run -p mla-titlecase-cli -- \
+  lexicon fetch wikidata \
+  --output /tmp/wikidata.json \
+  --language en \
+  --limit 250
+
+cargo run -p mla-titlecase-cli -- \
+  lexicon prepare wikidata \
+  --input /tmp/wikidata.json \
+  --output /tmp/wikidata-prepared.json \
+  --payload-kind multiword-map
+```
+
+Wikidata is useful when you want broad optional coverage for people, organizations, works, and aliases. It is less attractive when you need a small, deterministic, fully curated source: live query results can be noisy if your filters are too broad, and larger queries will cost more time and memory than the GitHub-backed sources.
 
 ## Licensing expectations
 

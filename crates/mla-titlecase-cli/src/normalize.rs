@@ -1,7 +1,10 @@
 use std::io::Read;
 
 use flate2::read::GzDecoder;
-use mla_titlecase::{util::normalize::normalized_unique_sorted, PluginPayload, RankedEntry};
+use mla_titlecase::{
+    util::normalize::{lookup_key, normalized_unique_sorted},
+    MapEntry, PluginPayload, RankedEntry,
+};
 use rmpv::Value;
 use serde_json::Value as JsonValue;
 
@@ -132,6 +135,22 @@ pub(crate) fn parse_wordfreq_msgpack(raw: &[u8]) -> Result<NormalizedPayload> {
     })
 }
 
+pub(crate) fn canonical_map_payload(entries: Vec<(String, String)>) -> NormalizedPayload {
+    map_payload(entries, normalize_single_word_key, |entries| PluginPayload::CanonicalMap {
+        entries,
+    })
+}
+
+pub(crate) fn multiword_map_payload(entries: Vec<(String, String)>) -> NormalizedPayload {
+    map_payload(entries, normalize_phrase_key, |entries| PluginPayload::MultiwordMap { entries })
+}
+
+pub(crate) fn protected_spellings_payload(entries: Vec<(String, String)>) -> NormalizedPayload {
+    map_payload(entries, normalize_single_word_key, |entries| PluginPayload::ProtectedSpellings {
+        entries,
+    })
+}
+
 fn word_set_payload(words: Vec<String>, ignored_records: usize) -> NormalizedPayload {
     word_set_payload_with_counts(words.clone(), words.len(), ignored_records)
 }
@@ -152,6 +171,52 @@ fn word_set_payload_with_counts(
         },
         payload: PluginPayload::WordSet { words: normalized },
     }
+}
+
+fn map_payload<F>(
+    entries: Vec<(String, String)>,
+    normalize_key: F,
+    build_payload: impl FnOnce(Vec<MapEntry>) -> PluginPayload,
+) -> NormalizedPayload
+where
+    F: Fn(&str) -> String,
+{
+    let input_records = entries.len();
+    let mut deduped = std::collections::BTreeMap::new();
+    let mut valid_records = 0_usize;
+    let mut ignored_records = 0_usize;
+
+    for (key, value) in entries {
+        let normalized_key = normalize_key(&key);
+        let normalized_value = value.trim();
+        if normalized_key.is_empty() || normalized_value.is_empty() {
+            ignored_records += 1;
+            continue;
+        }
+        valid_records += 1;
+        deduped.entry(normalized_key).or_insert_with(|| normalized_value.to_string());
+    }
+
+    let entries =
+        deduped.into_iter().map(|(key, value)| MapEntry { key, value }).collect::<Vec<_>>();
+
+    NormalizedPayload {
+        report: NormalizationReport {
+            input_records,
+            output_entries: entries.len(),
+            duplicates_removed: valid_records.saturating_sub(entries.len()),
+            ignored_records,
+        },
+        payload: build_payload(entries),
+    }
+}
+
+fn normalize_single_word_key(value: &str) -> String {
+    lookup_key(value)
+}
+
+fn normalize_phrase_key(value: &str) -> String {
+    value.split_whitespace().map(lookup_key).collect::<Vec<_>>().join(" ")
 }
 
 fn resolve_scowl_headword(fragment: &str, current_headword: Option<&str>) -> Option<String> {

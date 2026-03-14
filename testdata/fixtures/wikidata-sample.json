@@ -1,0 +1,27 @@
+{
+  "head": {
+    "vars": ["item", "itemLabel", "altLabel"]
+  },
+  "results": {
+    "bindings": [
+      {
+        "item": { "type": "uri", "value": "http://www.wikidata.org/entity/Q60" },
+        "itemLabel": { "xml:lang": "en", "type": "literal", "value": "New York City" },
+        "altLabel": { "xml:lang": "en", "type": "literal", "value": "NYC" }
+      },
+      {
+        "item": { "type": "uri", "value": "http://www.wikidata.org/entity/Q60" },
+        "itemLabel": { "xml:lang": "en", "type": "literal", "value": "New York City" },
+        "altLabel": { "xml:lang": "en", "type": "literal", "value": "New York, New York" }
+      },
+      {
+        "item": { "type": "uri", "value": "http://www.wikidata.org/entity/Q255" },
+        "itemLabel": { "xml:lang": "en", "type": "literal", "value": "Ludwig van Beethoven" }
+      },
+      {
+        "item": { "type": "uri", "value": "http://www.wikidata.org/entity/Q312" },
+        "itemLabel": { "xml:lang": "en", "type": "literal", "value": "eBay" }
+      }
+    ]
+  }
+}

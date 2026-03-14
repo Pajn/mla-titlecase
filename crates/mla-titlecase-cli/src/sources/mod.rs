@@ -3,6 +3,7 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    cli::PreparePayloadKind,
     error::{CliError, Result},
     manifest::{NormalizationReport, PreparedLexicon, PreparedMetadata, RawSourceManifest},
     normalize::NormalizedPayload,
@@ -11,6 +12,7 @@ use crate::{
 pub(crate) mod github;
 pub(crate) mod scowl;
 pub(crate) mod stopwords_iso;
+pub(crate) mod wikidata;
 pub(crate) mod wordfreq;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, clap::ValueEnum, PartialEq, Eq)]
@@ -18,6 +20,7 @@ pub(crate) mod wordfreq;
 pub(crate) enum SourceId {
     Scowl,
     StopwordsIso,
+    Wikidata,
     Wordfreq,
 }
 
@@ -26,6 +29,7 @@ impl SourceId {
         match self {
             Self::Scowl => "scowl",
             Self::StopwordsIso => "stopwords-iso",
+            Self::Wikidata => "wikidata",
             Self::Wordfreq => "wordfreq",
         }
     }
@@ -60,14 +64,32 @@ pub(crate) struct PrepareContext {
     pub(crate) notice: Option<String>,
 }
 
-pub(crate) fn all_sources() -> [SourceDefinition; 3] {
-    [scowl::definition(), stopwords_iso::definition(), wordfreq::definition()]
+#[derive(Debug, Clone, Default)]
+pub(crate) struct FetchOptions {
+    pub(crate) query: Option<String>,
+    pub(crate) language: Option<String>,
+    pub(crate) limit: Option<usize>,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct PrepareOptions {
+    pub(crate) payload_kind: Option<PreparePayloadKind>,
+}
+
+pub(crate) fn all_sources() -> [SourceDefinition; 4] {
+    [
+        scowl::definition(),
+        stopwords_iso::definition(),
+        wikidata::definition(),
+        wordfreq::definition(),
+    ]
 }
 
 pub(crate) fn source_definition(source: SourceId) -> SourceDefinition {
     match source {
         SourceId::Scowl => scowl::definition(),
         SourceId::StopwordsIso => stopwords_iso::definition(),
+        SourceId::Wikidata => wikidata::definition(),
         SourceId::Wordfreq => wordfreq::definition(),
     }
 }
@@ -75,10 +97,12 @@ pub(crate) fn source_definition(source: SourceId) -> SourceDefinition {
 pub(crate) fn fetch_default(
     source: SourceId,
     client: &reqwest::blocking::Client,
+    options: &FetchOptions,
 ) -> Result<ResolvedSource> {
     match source {
         SourceId::Scowl => scowl::fetch(client),
         SourceId::StopwordsIso => stopwords_iso::fetch(client),
+        SourceId::Wikidata => wikidata::fetch(client, options),
         SourceId::Wordfreq => wordfreq::fetch(client),
     }
 }
@@ -87,12 +111,14 @@ pub(crate) fn prepare_source(
     source: SourceId,
     raw: &[u8],
     context: PrepareContext,
+    options: PrepareOptions,
 ) -> Result<PreparedLexicon> {
     let definition = source_definition(source);
     let NormalizedPayload { payload, report } = match source {
-        SourceId::Scowl => scowl::prepare(raw)?,
-        SourceId::StopwordsIso => stopwords_iso::prepare(raw)?,
-        SourceId::Wordfreq => wordfreq::prepare(raw)?,
+        SourceId::Scowl => scowl::prepare(raw, options)?,
+        SourceId::StopwordsIso => stopwords_iso::prepare(raw, options)?,
+        SourceId::Wikidata => wikidata::prepare(raw, options)?,
+        SourceId::Wordfreq => wordfreq::prepare(raw, options)?,
     };
 
     Ok(PreparedLexicon {
@@ -158,6 +184,33 @@ pub(crate) fn format_prepare_summary(report: &NormalizationReport) -> String {
     )
 }
 
+pub(crate) fn require_payload_kind(
+    source: SourceId,
+    requested: Option<PreparePayloadKind>,
+    expected: PreparePayloadKind,
+) -> Result<()> {
+    if let Some(kind) = requested {
+        if kind != expected {
+            return Err(CliError::SourceMetadata(format!(
+                "{} only supports --payload-kind {}",
+                source.as_str(),
+                payload_kind_name(expected)
+            )));
+        }
+    }
+    Ok(())
+}
+
+pub(crate) const fn payload_kind_name(kind: PreparePayloadKind) -> &'static str {
+    match kind {
+        PreparePayloadKind::WordSet => "word-set",
+        PreparePayloadKind::CanonicalMap => "canonical-map",
+        PreparePayloadKind::MultiwordMap => "multiword-map",
+        PreparePayloadKind::RankedWords => "ranked-words",
+        PreparePayloadKind::ProtectedSpellings => "protected-spellings",
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{all_sources, source_definition, SourceId};
@@ -165,7 +218,7 @@ mod tests {
     #[test]
     fn exposes_source_registry() {
         let sources = all_sources();
-        assert_eq!(sources.len(), 3);
+        assert_eq!(sources.len(), 4);
         assert_eq!(source_definition(SourceId::Scowl).id.as_str(), "scowl");
     }
 }
