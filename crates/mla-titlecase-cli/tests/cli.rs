@@ -20,6 +20,7 @@ fn lists_sources() {
         .success()
         .stdout(predicate::str::contains("gnd"))
         .stdout(predicate::str::contains("musicbrainz"))
+        .stdout(predicate::str::contains("orcid"))
         .stdout(predicate::str::contains("scowl"))
         .stdout(predicate::str::contains("stopwords-iso"))
         .stdout(predicate::str::contains("wikidata"))
@@ -68,6 +69,18 @@ fn shows_musicbrainz_license_details() {
         .success()
         .stdout(predicate::str::contains("musicbrainz"))
         .stdout(predicate::str::contains("CC0"));
+}
+
+#[test]
+fn shows_orcid_license_details() {
+    Command::cargo_bin("mla-titlecase")
+        .unwrap()
+        .args(["lexicon", "show-license", "orcid"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("orcid"))
+        .stdout(predicate::str::contains("CC0"))
+        .stdout(predicate::str::contains("trademark"));
 }
 
 #[test]
@@ -523,6 +536,113 @@ fn prepare_build_inspect_and_diff_musicbrainz_plugins() {
     let inspect: Value = serde_json::from_slice(&inspect).unwrap();
     assert_eq!(inspect["payload_kind"], "protected-spellings");
     assert_eq!(inspect["entry_count"], 2);
+
+    let diff = Command::cargo_bin("mla-titlecase")
+        .unwrap()
+        .args([
+            "lexicon",
+            "diff-plugin",
+            json_plugin.to_str().unwrap(),
+            fst_plugin.to_str().unwrap(),
+            "--json",
+        ])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let diff: Value = serde_json::from_slice(&diff).unwrap();
+    assert_eq!(diff["added"], 0);
+    assert_eq!(diff["removed"], 0);
+    assert_eq!(diff["changed"], 0);
+}
+
+#[test]
+fn prepare_build_inspect_and_diff_orcid_plugins() {
+    let temp = tempdir().unwrap();
+    let raw = temp.path().join("orcid.json");
+    let raw_manifest = temp.path().join("orcid.json.manifest.json");
+    let prepared = temp.path().join("orcid-prepared.json");
+    let json_plugin = temp.path().join("orcid.json.plugin");
+    let fst_plugin = temp.path().join("orcid.mlatl");
+
+    Command::cargo_bin("mla-titlecase")
+        .unwrap()
+        .args([
+            "lexicon",
+            "fetch",
+            "orcid",
+            "--from-file",
+            fixture("orcid-raw-sample.json").to_str().unwrap(),
+            "--output",
+            raw.to_str().unwrap(),
+            "--manifest",
+            raw_manifest.to_str().unwrap(),
+        ])
+        .assert()
+        .success();
+
+    Command::cargo_bin("mla-titlecase")
+        .unwrap()
+        .args([
+            "lexicon",
+            "prepare",
+            "orcid",
+            "--input",
+            raw.to_str().unwrap(),
+            "--output",
+            prepared.to_str().unwrap(),
+            "--payload-kind",
+            "multiword-map",
+        ])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("prepared 3 orcid entries"))
+        .stdout(predicate::str::contains("3 normalized entries"));
+
+    let prepared_json: Value = serde_json::from_slice(&std::fs::read(&prepared).unwrap()).unwrap();
+    assert_eq!(prepared_json["metadata"]["source_id"], "orcid");
+    assert_eq!(prepared_json["payload"]["kind"], "multiword-map");
+
+    Command::cargo_bin("mla-titlecase")
+        .unwrap()
+        .args([
+            "lexicon",
+            "build-plugin",
+            prepared.to_str().unwrap(),
+            "--output",
+            json_plugin.to_str().unwrap(),
+            "--format",
+            "json",
+        ])
+        .assert()
+        .success();
+
+    Command::cargo_bin("mla-titlecase")
+        .unwrap()
+        .args([
+            "lexicon",
+            "build-plugin",
+            prepared.to_str().unwrap(),
+            "--output",
+            fst_plugin.to_str().unwrap(),
+            "--format",
+            "fst",
+        ])
+        .assert()
+        .success();
+
+    let inspect = Command::cargo_bin("mla-titlecase")
+        .unwrap()
+        .args(["lexicon", "inspect-plugin", json_plugin.to_str().unwrap(), "--json"])
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let inspect: Value = serde_json::from_slice(&inspect).unwrap();
+    assert_eq!(inspect["payload_kind"], "multiword-map");
+    assert_eq!(inspect["multiword_entries"], 3);
 
     let diff = Command::cargo_bin("mla-titlecase")
         .unwrap()

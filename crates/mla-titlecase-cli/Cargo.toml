@@ -18,6 +18,7 @@ clap.workspace = true
 flate2.workspace = true
 hex.workspace = true
 mla-titlecase = { path = "../mla-titlecase" }
+quick-xml.workspace = true
 reqwest.workspace = true
 rmpv.workspace = true
 serde.workspace = true

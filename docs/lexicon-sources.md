@@ -10,6 +10,7 @@ The repository does **not** commit fetched raw data or prepared outputs. End use
 | --- | --- | --- | --- |
 | `gnd` | live query to `lobid.org/gnd/search` | `CanonicalMap`, `MultiwordMap`, or `ProtectedSpellings` | GND authority data served by lobid is CC0; the exact request URL is preserved in the fetch manifest |
 | `musicbrainz` | live query to `musicbrainz.org/ws/2/artist/` | `CanonicalMap`, `MultiwordMap`, or `ProtectedSpellings` | MusicBrainz core database data is CC0; the exact request URL is preserved in the fetch manifest |
+| `orcid` | live aggregation of `pub.orcid.org` search plus person records | `CanonicalMap`, `MultiwordMap`, or `ProtectedSpellings` | ORCID public data is CC0; manifests also preserve a note about separate ORCID trademark/community guidance |
 | `scowl` | `en-wl/wordlist:data/scowl-pre.txt` on `v2` | `WordSet` | Preserve the upstream `Copyright` notice |
 | `stopwords-iso` | `stopwords-iso/stopwords-en:stopwords-en.json` on `master` | `WordSet` | MIT license text is preserved in fetch metadata |
 | `wikidata` | live query to `query.wikidata.org/sparql` | `CanonicalMap`, `MultiwordMap`, or `ProtectedSpellings` | Structured data is CC0; the exact query URL is preserved in the fetch manifest |
@@ -161,6 +162,28 @@ During `prepare`, the CLI preserves artist `name`, `sort-name`, and alias surfac
 - `--payload-kind multiword-map` for multiword artist and alias names
 
 Use MusicBrainz when the deployment is music-heavy and stylized artist names matter. Prefer Wikidata or GND when you need a broader general-purpose authority source.
+
+## `orcid`
+
+`orcid` is the narrowest of the authority-style sources in this CLI. The implementation is intentionally explicit about scope:
+
+- it queries the public ORCID search API for a small set of record identifiers
+- it fetches the corresponding public person records
+- it writes an aggregated raw JSON artifact so `prepare` can run deterministically afterward
+
+This source is useful when you care about:
+
+- researcher names
+- academic and scholarly titles
+- publication-adjacent person-name normalization
+
+The current flow supports:
+
+- `--query <orcid-search-query>` for the public search
+- `--limit <n>` for the number of person records fetched
+- `--payload-kind canonical-map`, `multiword-map`, or `protected-spellings` during `prepare`
+
+The important licensing nuance is that ORCID's public data is CC0, but ORCID's name, logo, and community guidance are not the same thing as the data license. The CLI preserves that distinction in source notices so downstream users do not mistake trademark/display guidance for a license restriction on the public data itself.
 
 ## Licensing expectations
 
