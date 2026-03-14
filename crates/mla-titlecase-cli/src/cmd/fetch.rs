@@ -11,24 +11,39 @@ use crate::{
 pub(crate) fn run(args: FetchArgs) -> Result<()> {
     sources::require_acknowledgement(args.source, args.acknowledge_cc_by_sa)?;
     let definition = sources::source_definition(args.source);
-    let (bytes, source_url) = if let Some(path) = args.from_file.as_ref() {
+    let resolved = if let Some(path) = args.from_file.as_ref() {
         fsutil::copy_file(path, &args.output)?;
-        (std::fs::read(&args.output)?, format!("file://{}", path.display()))
+        sources::ResolvedSource {
+            bytes: std::fs::read(&args.output)?,
+            source_url: format!("file://{}", path.display()),
+            source_version: None,
+            license_summary: definition.license_summary.to_string(),
+            notice: (!definition.notice.is_empty()).then(|| definition.notice.to_string()),
+        }
+    } else if let Some(url) = args.url.as_ref() {
+        let client = sources::github::client()?;
+        sources::ResolvedSource {
+            bytes: sources::github::download_bytes(&client, url)?,
+            source_url: url.clone(),
+            source_version: None,
+            license_summary: definition.license_summary.to_string(),
+            notice: (!definition.notice.is_empty()).then(|| definition.notice.to_string()),
+        }
     } else {
-        let url = args.url.clone().unwrap_or_else(|| definition.default_url.to_string());
-        let response = reqwest::blocking::get(&url)?.error_for_status()?;
-        (response.bytes()?.to_vec(), url)
+        let client = sources::github::client()?;
+        sources::fetch_default(args.source, &client)?
     };
 
     if args.from_file.is_none() {
-        fsutil::write_bytes(&args.output, &bytes)?;
+        fsutil::write_bytes(&args.output, &resolved.bytes)?;
     }
     let manifest = RawSourceManifest::new(
         definition.id.as_str(),
-        source_url,
-        &bytes,
-        definition.license_summary,
-        (!definition.notice.is_empty()).then(|| definition.notice.to_string()),
+        resolved.source_url,
+        resolved.source_version,
+        &resolved.bytes,
+        resolved.license_summary,
+        resolved.notice,
     );
     let manifest_path =
         args.manifest.clone().unwrap_or_else(|| default_manifest_path(&args.output));
@@ -36,10 +51,13 @@ pub(crate) fn run(args: FetchArgs) -> Result<()> {
 
     println!(
         "fetched {} bytes from {} to {}",
-        bytes.len(),
+        resolved.bytes.len(),
         manifest.source_url,
         args.output.display()
     );
+    if let Some(source_version) = manifest.source_version.as_deref() {
+        println!("resolved version: {source_version}");
+    }
     Ok(())
 }
 

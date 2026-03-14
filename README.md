@@ -42,12 +42,16 @@ List supported sources:
 cargo run -p mla-titlecase-cli -- lexicon list-sources
 ```
 
-Prepare local fixture data and build a plugin:
+Fetch a real upstream source, prepare it, and build a plugin:
 
 ```bash
 cargo run -p mla-titlecase-cli -- \
+  lexicon fetch stopwords-iso \
+  --output /tmp/stopwords-raw.json
+
+cargo run -p mla-titlecase-cli -- \
   lexicon prepare stopwords-iso \
-  --input testdata/fixtures/stopwords-en.json \
+  --input /tmp/stopwords-raw.json \
   --output /tmp/stopwords-prepared.json
 
 cargo run -p mla-titlecase-cli -- \
@@ -67,6 +71,7 @@ cargo run -p mla-titlecase-cli -- lexicon diff-plugin left.json right.mlatl --js
 
 - Use JSON plugins when you want readable artifacts that are easy to inspect or edit manually.
 - Use FST plugins when you want compact, deterministic, machine-oriented artifacts.
+- Use `ExternalLexicons::register_mmap_fst_plugin` when you want the runtime to query an FST plugin directly from a memory map.
 - Both formats round-trip through the same library schema.
 
 ## Licensing notes for fetchable sources

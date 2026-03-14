@@ -16,6 +16,9 @@ pub(crate) enum CliError {
     #[error(transparent)]
     Http(#[from] reqwest::Error),
 
+    #[error(transparent)]
+    Utf8(#[from] std::string::FromUtf8Error),
+
     #[error("source {0} requires --acknowledge-cc-by-sa")]
     MissingAcknowledgement(&'static str),
 
@@ -24,4 +27,7 @@ pub(crate) enum CliError {
 
     #[error("unsupported file format for {0}")]
     UnsupportedFormat(PathBuf),
+
+    #[error("source metadata error: {0}")]
+    SourceMetadata(String),
 }
