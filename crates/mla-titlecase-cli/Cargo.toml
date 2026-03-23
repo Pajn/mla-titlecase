@@ -5,6 +5,12 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 description = "CLI for building and inspecting mla-titlecase lexicons"
+repository.workspace = true
+homepage.workspace = true
+documentation = "https://docs.rs/mla-titlecase-cli"
+readme = "../../README.md"
+keywords = ["mla", "titlecase", "cli", "lexicon"]
+categories = ["command-line-utilities", "text-processing"]
 
 [[bin]]
 name = "mla-titlecase"
@@ -17,7 +23,7 @@ chrono.workspace = true
 clap.workspace = true
 flate2.workspace = true
 hex.workspace = true
-mla-titlecase = { path = "../mla-titlecase" }
+mla-titlecase.workspace = true
 quick-xml.workspace = true
 reqwest.workspace = true
 rmpv.workspace = true
@@ -33,3 +39,11 @@ predicates.workspace = true
 
 [lints]
 workspace = true
+
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }-v{ version }{ archive-suffix }"
+bin-dir = "{ name }-{ target }-v{ version }/{ bin }{ binary-ext }"
+pkg-fmt = "tgz"
+
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-fmt = "zip"

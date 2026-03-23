@@ -9,6 +9,29 @@ It ships two crates:
 
 The library stays useful without any downloaded data. Built-in MLA rules remain authoritative; external lexicons are additive and opt-in.
 
+## Installation
+
+Install the library in your own `Cargo.toml`:
+
+```toml
+[dependencies]
+mla-titlecase = "0.1"
+```
+
+Install the CLI from crates.io:
+
+```bash
+cargo install mla-titlecase-cli
+```
+
+Install the prebuilt CLI binary from GitHub Releases with `cargo binstall`:
+
+```bash
+cargo binstall mla-titlecase-cli
+```
+
+This installs the `mla-titlecase` executable from the `mla-titlecase-cli` crate.
+
 ## Quickstart
 
 ### Library
@@ -112,9 +135,9 @@ The CLI preserves source metadata and notice text in prepared/plugin artifacts.
 
 ## Examples and benches
 
-Examples live in `examples/` and are wired into the library crate manifest so `cargo test --examples -p mla-titlecase` compiles them.
+Examples live in `crates/mla-titlecase/examples/` and `cargo test --examples -p mla-titlecase` compiles them.
 
-Criterion benches live in `benches/` and cover title casing, lookup behavior, and plugin load costs.
+Criterion benches live in `crates/mla-titlecase/benches/` and cover title casing, lookup behavior, and plugin load costs.
 
 ## Contributor note
 
@@ -126,3 +149,13 @@ cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features
 cargo doc --workspace --all-features --no-deps
 ```
+
+To validate publishability locally, also run:
+
+```bash
+cargo package -p mla-titlecase
+```
+
+For the first crates.io release, `mla-titlecase-cli` cannot complete a local dry run until
+`mla-titlecase` has already been published, because Cargo resolves the versioned dependency through
+the crates.io index during packaging.
