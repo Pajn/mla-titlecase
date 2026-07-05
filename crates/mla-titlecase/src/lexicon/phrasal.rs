@@ -13,7 +13,8 @@ const ADVERBIAL_PARTICLES: &[&str] = &[
 ];
 
 pub(crate) fn is_adverbial_particle(word: &str) -> bool {
-    ADVERBIAL_PARTICLES.contains(&word)
+    // Kept sorted (asserted by `adverbial_particles_are_sorted`) for binary search.
+    ADVERBIAL_PARTICLES.binary_search(&word).is_ok()
 }
 
 /// Curated phrasal verbs: every listed form of the verb, and the particles it
@@ -144,6 +145,14 @@ mod tests {
     fn detects_adverbial_particles() {
         assert!(is_adverbial_particle("up"));
         assert!(!is_adverbial_particle("of"));
+    }
+
+    #[test]
+    fn adverbial_particles_are_sorted() {
+        assert!(
+            ADVERBIAL_PARTICLES.windows(2).all(|pair| pair[0] < pair[1]),
+            "ADVERBIAL_PARTICLES must stay sorted for binary_search"
+        );
     }
 
     #[test]

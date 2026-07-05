@@ -1,4 +1,4 @@
-// Mixed-case spellings that neither `capitalize_word` nor the all-caps
+// Mixed-case spellings that neither ordinary capitalization nor the all-caps
 // initialism table would produce (`iOS`, not `IOS`; `PhD`, not `PHD`).
 const PROTECTED: &[(&str, &str)] = &[
     ("ebay", "eBay"),

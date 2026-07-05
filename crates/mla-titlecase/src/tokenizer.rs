@@ -1,7 +1,9 @@
 use crate::token::{Token, TokenKind};
 
 pub(crate) fn tokenize(input: &str) -> Vec<Token<'_>> {
-    let mut tokens = Vec::new();
+    // Rough estimate of token count (words, whitespace runs, punctuation) to
+    // avoid repeated reallocations while pushing on the bulk-processing path.
+    let mut tokens = Vec::with_capacity(input.len() / 4 + 1);
     let mut index = 0;
 
     while index < input.len() {

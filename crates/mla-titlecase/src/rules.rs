@@ -1,4 +1,4 @@
-use crate::casing::{lowercase_word, style_word};
+use crate::casing::{lowercase_word, push_styled};
 use crate::config::{
     AllCapsPolicy, HyphenStyle, LocaleProfile, NameParticlePolicy, SmallWordPolicy,
     TitleCaseOptions, UnknownWordCasing,
@@ -12,20 +12,37 @@ use crate::lexicon::{
     abbreviation_spelling, built_in_protected_spelling, is_name_particle_for_locale, is_small_word,
 };
 use crate::token::Token;
-use crate::util::normalize::lookup_key;
+use crate::util::normalize::{lookup_key, normalized_key};
+use crate::util::unicode::push_lowercased;
 
 pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> String {
+    let mut output = String::new();
+    apply_into(&mut output, tokens, options);
+    output
+}
+
+/// Appends the title-cased rendering of `tokens` into `output`. Callers that
+/// process many titles can reuse a single buffer to avoid an allocation per
+/// call.
+pub(crate) fn apply_into(
+    output: &mut String,
+    tokens: &[Token<'_>],
+    options: &TitleCaseOptions<'_>,
+) {
     let first = first_significant_word(tokens);
     let last = last_significant_word(tokens);
     let shouting = input_is_all_caps(tokens);
 
-    // `Preserve` treats all-caps input as intentional stylization and returns
-    // it verbatim, skipping small-word lowering and recasing alike.
-    if shouting && options.all_caps_policy == AllCapsPolicy::Preserve {
-        return tokens.iter().map(|token| token.text).collect();
-    }
+    output.reserve(tokens.iter().map(|token| token.text.len()).sum());
 
-    let mut output = String::with_capacity(tokens.iter().map(|token| token.text.len()).sum());
+    // `Preserve` treats all-caps input as intentional stylization and emits it
+    // verbatim, skipping small-word lowering and recasing alike.
+    if shouting && options.all_caps_policy == AllCapsPolicy::Preserve {
+        for token in tokens {
+            output.push_str(token.text);
+        }
+        return;
+    }
 
     let mut index = 0_usize;
     while index < tokens.len() {
@@ -45,7 +62,7 @@ pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> Str
             continue;
         }
 
-        let key = lookup_key(token.text);
+        let key = normalized_key(token.text);
         let is_first = first == Some(index);
         let is_last = last == Some(index);
         // MLA capitalizes the first and last words of both the title and the
@@ -78,7 +95,7 @@ pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> Str
             || is_lowerable_name_particle(&key, should_capitalize, tokens, index, options)
             || should_force_lowercase(&key, should_capitalize, tokens, index, options)
         {
-            output.push_str(&lowercase_word(token.text, LocaleProfile::English));
+            push_lowercased(output, token.text, LocaleProfile::English);
             index += 1;
             continue;
         }
@@ -98,18 +115,13 @@ pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> Str
         }
 
         if shouting && normalize_all_caps_word(&key, options) {
-            output.push_str(&style_word(
-                &lowercase_word(token.text, options.locale),
-                true,
-                options,
-            ));
+            let lowered = lowercase_word(token.text, options.locale);
+            push_styled(output, &lowered, true, options);
         } else {
-            output.push_str(&style_word(token.text, true, options));
+            push_styled(output, token.text, true, options);
         }
         index += 1;
     }
-
-    output
 }
 
 /// Decides whether an individual word of shouting input should be recased.
