@@ -158,6 +158,30 @@ fn lowercases_prepositions_of_any_length() {
 }
 
 #[test]
+fn capitalizes_adverbial_particles() {
+    // A particle before punctuation or a conjunction cannot be a preposition.
+    assert_eq!(titlecase_mla("come up and see me"), "Come Up and See Me");
+    assert_eq!(titlecase_mla("wake up, little susie"), "Wake Up, Little Susie");
+    // A particle after a phrasal-verb head is an adverb even with an object.
+    assert_eq!(titlecase_mla("turn off the lights"), "Turn Off the Lights");
+    assert_eq!(titlecase_mla("burning down the house"), "Burning Down the House");
+    assert_eq!(titlecase_mla("runnin' down a dream"), "Runnin' Down a Dream");
+    // An object pronoun may separate the verb from its particle.
+    assert_eq!(titlecase_mla("wake me up before you go-go"), "Wake Me Up before You Go-Go");
+}
+
+#[test]
+fn keeps_prepositional_uses_lowercase() {
+    assert_eq!(titlecase_mla("walking down the street"), "Walking down the Street");
+    assert_eq!(titlecase_mla("livin' on a prayer"), "Livin' on a Prayer");
+    assert_eq!(titlecase_mla("the wind in the willows"), "The Wind in the Willows");
+
+    let options =
+        TitleCaseOptions { capitalize_phrasal_particles: false, ..TitleCaseOptions::default() };
+    assert_eq!(titlecase_with_options("turn off the lights", &options), "Turn off the Lights");
+}
+
+#[test]
 fn keeps_contraction_endings_lowercase() {
     assert_eq!(titlecase_mla("don't look up"), "Don't Look Up");
     assert_eq!(titlecase_mla("it's a wonderful life"), "It's a Wonderful Life");

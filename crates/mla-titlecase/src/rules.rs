@@ -1,8 +1,8 @@
 use crate::casing::{lowercase_word, style_word};
 use crate::config::{HyphenStyle, NameParticlePolicy, SmallWordPolicy, TitleCaseOptions};
 use crate::context::{
-    first_significant_word, follows_colon, last_significant_word, likely_name_particle_context,
-    part_of_hyphenated_compound, precedes_colon,
+    first_significant_word, follows_colon, last_significant_word, likely_adverbial_particle,
+    likely_name_particle_context, part_of_hyphenated_compound, precedes_colon,
 };
 use crate::lexicon::{
     abbreviation_spelling, built_in_protected_spelling, is_name_particle_for_locale, is_small_word,
@@ -156,6 +156,12 @@ fn should_force_lowercase(
         && likely_name_particle_context(tokens, index)
     {
         return true;
+    }
+
+    // MLA capitalizes adverbs, so a small word acting as an adverbial
+    // particle ("Turn Off the Lights") escapes lowering.
+    if options.capitalize_phrasal_particles && likely_adverbial_particle(tokens, index, key) {
+        return false;
     }
 
     match options.small_word_policy {
