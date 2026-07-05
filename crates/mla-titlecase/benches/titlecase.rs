@@ -2,9 +2,23 @@
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use mla_titlecase::{
-    titlecase_mla, titlecase_with_options, ExternalLexicons, LocaleProfile, NameParticlePolicy,
-    SmallWordPolicy, TitleCaseOptions,
+    titlecase_into, titlecase_mla, titlecase_with_options, ExternalLexicons, LocaleProfile,
+    NameParticlePolicy, SmallWordPolicy, TitleCaseOptions,
 };
+
+/// A representative batch of titles for the bulk-processing benchmarks.
+const BATCH: &[&str] = &[
+    "the wind in the willows",
+    "love in the time of cholera",
+    "a by-product of war",
+    "preface: the return of sherlock holmes",
+    "state-of-the-art design",
+    "rock 'n' roll forever",
+    "what dreams are made of: a study",
+    "the man who wasn't there",
+    "miracle on 34th street",
+    "dancing among the stars",
+];
 
 const SHORT_TITLE: &str = "the wind in the willows";
 const LONG_TITLE: &str =
@@ -58,6 +72,27 @@ fn bench_titlecase(c: &mut Criterion) {
     let phrase_options = TitleCaseOptions::with_external_lexicons(&lexicons);
     c.bench_function("titlecase_multiword_external", |b| {
         b.iter(|| black_box(titlecase_with_options("new york city stories", &phrase_options)))
+    });
+
+    // Bulk processing: allocate a fresh String per title...
+    let default_options = TitleCaseOptions::default();
+    c.bench_function("titlecase_batch_allocating", |b| {
+        b.iter(|| {
+            for title in BATCH {
+                black_box(titlecase_with_options(title, &default_options));
+            }
+        })
+    });
+
+    // ...versus reusing one buffer across the whole batch.
+    c.bench_function("titlecase_batch_reused_buffer", |b| {
+        let mut buffer = String::new();
+        b.iter(|| {
+            for title in BATCH {
+                titlecase_into(&mut buffer, title, &default_options);
+                black_box(&buffer);
+            }
+        })
     });
 }
 

@@ -10,3 +10,9 @@ pub(crate) fn titlecase_with_options(input: &str, options: &TitleCaseOptions<'_>
     let tokens = tokenize(input);
     rules::apply(&tokens, options)
 }
+
+pub(crate) fn titlecase_into(out: &mut String, input: &str, options: &TitleCaseOptions<'_>) {
+    out.clear();
+    let tokens = tokenize(input);
+    rules::apply_into(out, &tokens, options);
+}
