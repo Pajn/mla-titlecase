@@ -84,26 +84,30 @@ jobs:
             exit 1
           fi
 
-          echo "version=${VERSION}" >> "${GITHUB_ENV}"
-          echo "release_tag=${RELEASE_TAG}" >> "${GITHUB_ENV}"
-          echo "archive_base=mla-titlecase-cli-${{ matrix.target }}-v${VERSION}" >> "${GITHUB_ENV}"
+          {
+            echo "version=${VERSION}"
+            echo "release_tag=${RELEASE_TAG}"
+            echo "archive_base=mla-titlecase-cli-${{ matrix.target }}-v${VERSION}"
+          } >> "${GITHUB_ENV}"
 
       - name: Build release binary
         run: cargo build --locked --release --target ${{ matrix.target }} -p mla-titlecase-cli
 
       - name: Package release archive
         shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
         run: |
           ARCHIVE_DIR="${archive_base}"
           mkdir -p "${ARCHIVE_DIR}"
           cp README.md LICENSE "${ARCHIVE_DIR}/"
 
-          if [[ "${{ matrix.target }}" == *windows* ]]; then
-            cp "target/${{ matrix.target }}/release/mla-titlecase.exe" "${ARCHIVE_DIR}/mla-titlecase.exe"
+          if [[ "${TARGET}" == *windows* ]]; then
+            cp "target/${TARGET}/release/mla-titlecase.exe" "${ARCHIVE_DIR}/mla-titlecase.exe"
             7z a "${archive_base}.zip" "./${ARCHIVE_DIR}/*"
             sha256sum "${archive_base}.zip" > "${archive_base}.zip.sha256"
           else
-            cp "target/${{ matrix.target }}/release/mla-titlecase" "${ARCHIVE_DIR}/mla-titlecase"
+            cp "target/${TARGET}/release/mla-titlecase" "${ARCHIVE_DIR}/mla-titlecase"
             tar -czf "${archive_base}.tgz" "${ARCHIVE_DIR}"
             sha256sum "${archive_base}.tgz" > "${archive_base}.tgz.sha256"
           fi
