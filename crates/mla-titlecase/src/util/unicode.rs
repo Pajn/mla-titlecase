@@ -11,45 +11,91 @@ pub fn has_cased_letter(value: &str) -> bool {
 /// Lowercases a string using locale-aware handling for the supported profiles.
 #[must_use]
 pub fn lowercase_with_locale(value: &str, locale: LocaleProfile) -> String {
+    let mut out = String::with_capacity(value.len());
+    push_lowercased(&mut out, value, locale);
+    out
+}
+
+/// Locale-aware lowercasing that appends into an existing buffer, avoiding a
+/// per-word temporary allocation on the hot path.
+pub(crate) fn push_lowercased(out: &mut String, value: &str, locale: LocaleProfile) {
     match locale {
-        LocaleProfile::Turkish => value
-            .chars()
-            .flat_map(|ch| match ch {
-                'I' => "ı".chars().collect::<Vec<_>>(),
-                '\u{0130}' => "i".chars().collect::<Vec<_>>(),
-                _ => ch.to_lowercase().collect(),
-            })
-            .collect(),
-        _ => value.to_lowercase(),
+        LocaleProfile::Turkish => {
+            for ch in value.chars() {
+                match ch {
+                    'I' => out.push('ı'),
+                    '\u{0130}' => out.push('i'),
+                    _ => out.extend(ch.to_lowercase()),
+                }
+            }
+        }
+        // ASCII fast path: no allocation and no Unicode table lookups.
+        _ if value.is_ascii() => {
+            for byte in value.bytes() {
+                out.push(byte.to_ascii_lowercase() as char);
+            }
+        }
+        // `str::to_lowercase` handles context-sensitive cases (e.g. Greek final
+        // sigma) that a char-by-char pass would miss.
+        _ => out.push_str(&value.to_lowercase()),
     }
 }
 
 /// Title-capitalizes a token using locale-aware handling for the supported profiles.
 #[must_use]
 pub fn capitalize_with_locale(value: &str, locale: LocaleProfile) -> String {
+    let mut out = String::with_capacity(value.len());
+    push_capitalized(&mut out, value, locale);
+    out
+}
+
+/// Locale-aware capitalization that appends into an existing buffer. Still
+/// allocates one temporary for the lowercased form (needed for the apostrophe
+/// look-behind), but writes the result straight into `out`.
+pub(crate) fn push_capitalized(out: &mut String, value: &str, locale: LocaleProfile) {
     if value.is_empty() {
-        return String::new();
+        return;
     }
 
-    if locale == LocaleProfile::Dutch {
-        let lowered = lowercase_with_locale(value, locale);
-        if let Some(suffix) = lowered.strip_prefix("ij") {
-            return format!("IJ{suffix}");
+    // Fast path: a plain ASCII word with no apostrophe needs no lowered
+    // temporary and no look-behind. Excludes Dutch (the `ij` digraph) and
+    // Turkish (dotted `İ`), whose first-letter casing is not plain ASCII. A
+    // single eligibility pass keeps the check cheap for short words.
+    if !matches!(locale, LocaleProfile::Dutch | LocaleProfile::Turkish)
+        && value.bytes().all(|byte| byte.is_ascii() && byte != b'\'')
+    {
+        let mut seen_alphanumeric = false;
+        for byte in value.bytes() {
+            let ch = byte as char;
+            if !seen_alphanumeric && ch.is_ascii_alphabetic() {
+                out.push(ch.to_ascii_uppercase());
+            } else {
+                out.push(ch.to_ascii_lowercase());
+            }
+            seen_alphanumeric |= ch.is_ascii_alphanumeric();
         }
+        return;
     }
 
     let lowered = lowercase_with_locale(value, locale);
-    let mut result = String::with_capacity(lowered.len());
-    let mut make_upper = true;
 
+    if locale == LocaleProfile::Dutch {
+        if let Some(suffix) = lowered.strip_prefix("ij") {
+            out.push_str("IJ");
+            out.push_str(suffix);
+            return;
+        }
+    }
+
+    let mut make_upper = true;
     for (index, ch) in lowered.char_indices() {
         if make_upper && ch.is_alphabetic() {
-            append_uppercase(&mut result, ch, locale);
+            append_uppercase(out, ch, locale);
             make_upper = false;
             continue;
         }
 
-        result.push(ch);
+        out.push(ch);
         if ch.is_alphanumeric() {
             // A leading digit occupies the capitalized position: `42nd`, not `42Nd`.
             make_upper = false;
@@ -59,8 +105,6 @@ pub fn capitalize_with_locale(value: &str, locale: LocaleProfile) -> String {
             make_upper = true;
         }
     }
-
-    result
 }
 
 /// Contraction endings that keep the letter after an apostrophe lowercase.
@@ -129,6 +173,18 @@ mod tests {
     fn leaves_digit_led_words_lowercase() {
         assert_eq!(capitalize_with_locale("42nd", LocaleProfile::English), "42nd");
         assert_eq!(capitalize_with_locale("3rd", LocaleProfile::English), "3rd");
+    }
+
+    #[test]
+    fn capitalizes_plain_ascii_via_fast_path() {
+        // Plain ASCII, no apostrophe: the allocation-free fast path.
+        assert_eq!(capitalize_with_locale("hello", LocaleProfile::English), "Hello");
+        // Internal capitals are normalized to titlecase, matching the slow path.
+        assert_eq!(capitalize_with_locale("macdonald", LocaleProfile::English), "Macdonald");
+        assert_eq!(capitalize_with_locale("MacDonald", LocaleProfile::English), "Macdonald");
+        // A leading digit occupies the capitalized position; letters stay lower.
+        assert_eq!(capitalize_with_locale("3D", LocaleProfile::English), "3d");
+        assert_eq!(capitalize_with_locale("3d", LocaleProfile::English), "3d");
     }
 
     #[test]

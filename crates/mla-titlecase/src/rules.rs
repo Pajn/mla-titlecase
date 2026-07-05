@@ -1,4 +1,4 @@
-use crate::casing::{lowercase_word, style_word};
+use crate::casing::{lowercase_word, push_styled};
 use crate::config::{
     AllCapsPolicy, HyphenStyle, LocaleProfile, NameParticlePolicy, SmallWordPolicy,
     TitleCaseOptions, UnknownWordCasing,
@@ -12,7 +12,8 @@ use crate::lexicon::{
     abbreviation_spelling, built_in_protected_spelling, is_name_particle_for_locale, is_small_word,
 };
 use crate::token::Token;
-use crate::util::normalize::lookup_key;
+use crate::util::normalize::{lookup_key, normalized_key};
+use crate::util::unicode::push_lowercased;
 
 pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> String {
     let first = first_significant_word(tokens);
@@ -45,7 +46,7 @@ pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> Str
             continue;
         }
 
-        let key = lookup_key(token.text);
+        let key = normalized_key(token.text);
         let is_first = first == Some(index);
         let is_last = last == Some(index);
         // MLA capitalizes the first and last words of both the title and the
@@ -78,7 +79,7 @@ pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> Str
             || is_lowerable_name_particle(&key, should_capitalize, tokens, index, options)
             || should_force_lowercase(&key, should_capitalize, tokens, index, options)
         {
-            output.push_str(&lowercase_word(token.text, LocaleProfile::English));
+            push_lowercased(&mut output, token.text, LocaleProfile::English);
             index += 1;
             continue;
         }
@@ -98,13 +99,10 @@ pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> Str
         }
 
         if shouting && normalize_all_caps_word(&key, options) {
-            output.push_str(&style_word(
-                &lowercase_word(token.text, options.locale),
-                true,
-                options,
-            ));
+            let lowered = lowercase_word(token.text, options.locale);
+            push_styled(&mut output, &lowered, true, options);
         } else {
-            output.push_str(&style_word(token.text, true, options));
+            push_styled(&mut output, token.text, true, options);
         }
         index += 1;
     }

@@ -1,6 +1,6 @@
 use crate::{
     config::{LocaleProfile, TitleCaseOptions},
-    util::unicode::{capitalize_with_locale, lowercase_with_locale},
+    util::unicode::{lowercase_with_locale, push_capitalized, push_lowercased},
 };
 
 pub(crate) fn lowercase_word(word: &str, locale: LocaleProfile) -> String {
@@ -40,24 +40,42 @@ pub(crate) fn has_internal_caps(word: &str) -> bool {
     false
 }
 
+#[cfg(test)]
 pub(crate) fn style_word(word: &str, capitalize: bool, options: &TitleCaseOptions<'_>) -> String {
+    let mut out = String::with_capacity(word.len());
+    push_styled(&mut out, word, capitalize, options);
+    out
+}
+
+/// Styles a word directly into an output buffer, avoiding the per-word temporary
+/// that `style_word` would allocate before being copied into the result.
+pub(crate) fn push_styled(
+    out: &mut String,
+    word: &str,
+    capitalize: bool,
+    options: &TitleCaseOptions<'_>,
+) {
     if is_all_caps_acronym(word) {
-        return word.to_string();
+        out.push_str(word);
+        return;
     }
 
     if is_dotted_abbreviation(word) {
-        return style_dotted_abbreviation(word);
+        out.push_str(&style_dotted_abbreviation(word));
+        return;
     }
 
     if !capitalize {
-        return lowercase_word(word, options.locale);
+        push_lowercased(out, word, options.locale);
+        return;
     }
 
     if options.preserve_existing_caps && has_internal_caps(word) {
-        return word.to_string();
+        out.push_str(word);
+        return;
     }
 
-    capitalize_word(word, options.locale)
+    push_capitalized(out, word, options.locale);
 }
 
 fn style_dotted_abbreviation(word: &str) -> String {
@@ -89,16 +107,11 @@ fn style_dotted_abbreviation(word: &str) -> String {
     result
 }
 
-pub(crate) fn capitalize_word(word: &str, locale: LocaleProfile) -> String {
-    capitalize_with_locale(word, locale)
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{
-        capitalize_word, has_internal_caps, is_all_caps_acronym, is_dotted_abbreviation, style_word,
-    };
+    use super::{has_internal_caps, is_all_caps_acronym, is_dotted_abbreviation, style_word};
     use crate::config::{LocaleProfile, TitleCaseOptions};
+    use crate::util::unicode::capitalize_with_locale as capitalize_word;
 
     #[test]
     fn capitalizes_after_apostrophe() {
