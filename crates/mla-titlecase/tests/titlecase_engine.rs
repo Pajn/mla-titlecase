@@ -93,6 +93,12 @@ fn supports_name_particle_heuristics() {
         titlecase_with_options("ludwig van beethoven in concert", &options),
         "Ludwig van Beethoven in Concert"
     );
+
+    // A particle next to a small word is not inside a personal-name run.
+    assert_eq!(
+        titlecase_with_options("riding the van to victory", &options),
+        "Riding the Van to Victory"
+    );
 }
 
 #[test]

@@ -1,7 +1,9 @@
 use crate::classify::{
     is_closing_punctuation, is_hyphen, is_opening_punctuation, is_significant_word,
 };
+use crate::lexicon::is_small_word;
 use crate::token::{Token, TokenKind};
+use crate::util::normalize::lookup_key;
 
 pub(crate) fn first_significant_word(tokens: &[Token<'_>]) -> Option<usize> {
     tokens.iter().position(|token| is_significant_word(*token))
@@ -56,8 +58,17 @@ pub(crate) fn followed_by_hyphen(tokens: &[Token<'_>], index: usize) -> bool {
     tokens.get(index + 1).is_some_and(|token| is_hyphen(*token))
 }
 
+/// A particle sits inside a personal-name run when both neighbors look like
+/// name words. Small words disqualify a neighbor, so `van` in "the van of
+/// progress" keeps its regular capitalization while "Ludwig van Beethoven"
+/// and chained particles like "Jan van der Heijden" stay lowered.
 pub(crate) fn likely_name_particle_context(tokens: &[Token<'_>], index: usize) -> bool {
-    previous_word(tokens, index).is_some() && next_word(tokens, index).is_some()
+    looks_like_name_word(previous_word(tokens, index))
+        && looks_like_name_word(next_word(tokens, index))
+}
+
+fn looks_like_name_word(word: Option<Token<'_>>) -> bool {
+    word.is_some_and(|token| !is_small_word(&lookup_key(token.text)))
 }
 
 fn previous_word<'a>(tokens: &'a [Token<'a>], index: usize) -> Option<Token<'a>> {
@@ -101,5 +112,12 @@ mod tests {
         let tokens = tokenize("Ludwig van Beethoven");
         let word_index = tokens.iter().position(|token| token.text == "van").unwrap();
         assert!(likely_name_particle_context(&tokens, word_index));
+    }
+
+    #[test]
+    fn rejects_particles_next_to_small_words() {
+        let tokens = tokenize("riding the van to victory");
+        let word_index = tokens.iter().position(|token| token.text == "van").unwrap();
+        assert!(!likely_name_particle_context(&tokens, word_index));
     }
 }

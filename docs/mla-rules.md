@@ -48,7 +48,7 @@ That lets optional plugins preserve forms such as `New York City` without changi
 
 ## Name particles
 
-When `NameParticlePolicy::Heuristic` is enabled, common particles such as `van`, `de`, and `von` stay lowercase inside likely personal-name runs.
+When `NameParticlePolicy::Heuristic` is enabled, common particles such as `van`, `de`, and `von` stay lowercase inside likely personal-name runs. A particle only qualifies when the words on both sides look like name words (in particular, neither neighbor is a small word), so "Riding the Van to Victory" keeps its capital while "Ludwig van Beethoven" stays lowered.
 
 Locale profiles widen that heuristic carefully for supported languages such as Dutch, French, German, Italian, Spanish, and Turkish while keeping the default English MLA path unchanged.
 
