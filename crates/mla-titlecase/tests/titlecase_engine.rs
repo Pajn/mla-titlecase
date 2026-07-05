@@ -20,6 +20,18 @@ fn capitalizes_after_colon() {
 }
 
 #[test]
+fn capitalizes_last_word_before_colon() {
+    assert_eq!(
+        titlecase_mla("what dreams are made of: a study"),
+        "What Dreams Are Made Of: A Study"
+    );
+    assert_eq!(
+        titlecase_mla("the world we live in: essays on modern life"),
+        "The World We Live In: Essays on Modern Life"
+    );
+}
+
+#[test]
 fn handles_hyphenated_compounds() {
     assert_eq!(titlecase_mla("state-of-the-art design"), "State-of-the-Art Design");
 

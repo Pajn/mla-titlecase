@@ -2,7 +2,7 @@ use crate::casing::{lowercase_word, style_word};
 use crate::config::{HyphenStyle, NameParticlePolicy, SmallWordPolicy, TitleCaseOptions};
 use crate::context::{
     first_significant_word, follows_colon, last_significant_word, likely_name_particle_context,
-    part_of_hyphenated_compound,
+    part_of_hyphenated_compound, precedes_colon,
 };
 use crate::lexicon::{
     abbreviation_spelling, built_in_protected_spelling, is_name_particle_for_locale, is_small_word,
@@ -37,11 +37,14 @@ pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> Str
         let key = lookup_key(token.text);
         let is_first = first == Some(index);
         let is_last = last == Some(index);
-        let after_colon = options.capitalize_after_colon && follows_colon(tokens, index);
+        // MLA capitalizes the first and last words of both the title and the
+        // subtitle, so a colon boundary capitalizes on both sides.
+        let at_colon_boundary = options.capitalize_after_colon
+            && (follows_colon(tokens, index) || precedes_colon(tokens, index));
         let hyphenated = part_of_hyphenated_compound(tokens, index);
         let capitalize_hyphen =
             hyphenated && matches!(options.hyphen_style, HyphenStyle::CapitalizeBoth);
-        let should_capitalize = is_first || is_last || after_colon || capitalize_hyphen;
+        let should_capitalize = is_first || is_last || at_colon_boundary || capitalize_hyphen;
 
         if let Some(protected) = protected_spelling(token.text, &key, options) {
             if should_force_lowercase(&key, should_capitalize, tokens, index, options) {

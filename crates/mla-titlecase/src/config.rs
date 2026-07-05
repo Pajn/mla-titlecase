@@ -56,7 +56,8 @@ pub enum LocaleProfile {
 pub struct TitleCaseOptions<'a> {
     /// Preserve mixed-case input such as `iPhone` when the word is not forced lowercase.
     pub preserve_existing_caps: bool,
-    /// Capitalize the first significant word after a colon.
+    /// Treat colons as subtitle boundaries: capitalize the first significant
+    /// word after a colon and the last one before it.
     pub capitalize_after_colon: bool,
     /// Lowercase MLA small words when they appear internally.
     pub lowercase_small_words: bool,

@@ -1,5 +1,7 @@
-use crate::classify::{is_hyphen, is_opening_punctuation, is_significant_word};
-use crate::token::Token;
+use crate::classify::{
+    is_closing_punctuation, is_hyphen, is_opening_punctuation, is_significant_word,
+};
+use crate::token::{Token, TokenKind};
 
 pub(crate) fn first_significant_word(tokens: &[Token<'_>]) -> Option<usize> {
     tokens.iter().position(|token| is_significant_word(*token))
@@ -17,10 +19,25 @@ pub(crate) fn follows_colon(tokens: &[Token<'_>], index: usize) -> bool {
         if token.is_word() {
             return false;
         }
-        if token.kind == crate::token::TokenKind::Colon {
+        if token.kind == TokenKind::Colon {
             return true;
         }
         if !token.text.chars().all(char::is_whitespace) && !is_opening_punctuation(token) {
+            return false;
+        }
+    }
+    false
+}
+
+pub(crate) fn precedes_colon(tokens: &[Token<'_>], index: usize) -> bool {
+    for token in &tokens[index + 1..] {
+        if token.is_word() {
+            return false;
+        }
+        if token.kind == TokenKind::Colon {
+            return true;
+        }
+        if !token.text.chars().all(char::is_whitespace) && !is_closing_punctuation(*token) {
             return false;
         }
     }
@@ -61,6 +78,15 @@ mod tests {
         let tokens = tokenize("Title: the sequel");
         let word_index = tokens.iter().position(|token| token.text == "the").unwrap();
         assert!(follows_colon(&tokens, word_index));
+    }
+
+    #[test]
+    fn detects_word_preceding_colon() {
+        let tokens = tokenize("made of: a study");
+        let word_index = tokens.iter().position(|token| token.text == "of").unwrap();
+        assert!(super::precedes_colon(&tokens, word_index));
+        let word_index = tokens.iter().position(|token| token.text == "made").unwrap();
+        assert!(!super::precedes_colon(&tokens, word_index));
     }
 
     #[test]

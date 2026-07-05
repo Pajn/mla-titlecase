@@ -16,7 +16,7 @@ The first and last significant words are always capitalized, even if they are no
 
 ## Colon behavior
 
-When `capitalize_after_colon` is enabled (the default), the first significant word after a colon is capitalized.
+When `capitalize_after_colon` is enabled (the default), a colon is treated as a subtitle boundary: the first significant word after it and the last significant word before it are capitalized, matching MLA's rule that the first and last words of both the title and the subtitle are capitalized.
 
 ## Hyphen behavior
 
