@@ -52,3 +52,28 @@ pub fn titlecase_mla(input: &str) -> String {
 pub fn titlecase_with_options(input: &str, options: &TitleCaseOptions<'_>) -> String {
     titlecase::titlecase_with_options(input, options)
 }
+
+/// Converts `input` to MLA-style title case, writing the result into `out`.
+///
+/// `out` is cleared first, so its previous contents are replaced. Reusing one
+/// buffer across many calls avoids allocating a fresh `String` per title, which
+/// matters when processing large batches. Only the output buffer is reused:
+/// each call still allocates a `Vec` of tokens internally, so this reclaims the
+/// result allocation, not every allocation (see the
+/// `titlecase_batch_reused_buffer` benchmark).
+///
+/// # Examples
+///
+/// ```
+/// use mla_titlecase::{titlecase_into, TitleCaseOptions};
+///
+/// let options = TitleCaseOptions::default();
+/// let mut buffer = String::new();
+/// for title in ["the wind in the willows", "love in the time of cholera"] {
+///     titlecase_into(&mut buffer, title, &options);
+///     // use `buffer` here
+/// }
+/// ```
+pub fn titlecase_into(out: &mut String, input: &str, options: &TitleCaseOptions<'_>) {
+    titlecase::titlecase_into(out, input, options);
+}

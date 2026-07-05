@@ -24,6 +24,19 @@ Together these cut per-title time by roughly 35-50% over the naive path in the
 `titlecase` bench. Run `cargo bench -p mla-titlecase --bench titlecase` to
 compare against the committed baseline.
 
+## Reusing an output buffer
+
+`titlecase_into(&mut out, input, options)` writes into a caller-owned `String`
+(clearing it first) instead of returning a fresh one. Reusing a single buffer
+across a batch avoids one allocation per title; the `titlecase_batch_reused_buffer`
+bench runs a few percent faster than `titlecase_batch_allocating`.
+
+The gain is bounded because the tokenizer still allocates a `Vec` of tokens per
+call: those tokens borrow the input string, so the buffer cannot be pooled
+across calls without `unsafe`, which the workspace forbids. For most bulk
+workloads the saved output allocation plus caller control over the buffer is the
+worthwhile part.
+
 ## JSON vs FST
 
 JSON is easier to inspect and debug, but it pays normal parsing overhead.

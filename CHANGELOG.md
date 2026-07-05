@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - `AllCapsPolicy` for handling shouting input: `Normalize` (default, unchanged), `Preserve` (return intentional all-caps stylization verbatim), and `NormalizeKnownWords { unknown }` (title-case words a loaded dictionary word-set such as SCOWL recognizes; with SCOWL loaded and unknowns preserved, `SHERLOCK HISTORY` → `SHERLOCK History`). Unrecognized words are cast per `UnknownWordCasing`: `Preserve` (keep as likely acronyms), `TitleCase` (treat as ordinary words), or `PreserveShortAcronyms { max_acronym_len }` (preserve short words as acronyms but title-case longer ones as likely names).
 - The built-in abbreviation list grew from 11 to ~50 curated initialisms (`IBM`, `FBI`, `NATO`, `URL`, `PDF`, ...), all guarded to never collide with small words or ordinary English words; `iOS` and `PhD` join the built-in protected spellings.
 - The `n` written as `'n'` with flanking apostrophes is kept lowercase as a contraction of "and" (`Rock 'n' Roll`, `Fish 'n' Chips`).
+- `titlecase_into(&mut out, input, options)` writes the result into a caller-owned buffer (cleared first), letting bulk callers reuse one `String` across many titles to avoid a per-call allocation.
 
 ### Changed
 
