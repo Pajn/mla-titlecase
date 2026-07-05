@@ -1,0 +1,18 @@
+{
+  "items": [
+    {
+      "id": "https://ror.org/056d84691",
+      "names": [
+        { "value": "Karolinska Institutet", "types": ["ror_display", "label"] },
+        { "value": "KI", "types": ["acronym"] }
+      ]
+    },
+    {
+      "id": "https://ror.org/03vek6s52",
+      "name": "Harvard University",
+      "aliases": ["Harvard"],
+      "labels": [{ "label": "Université Harvard", "iso639": "fr" }],
+      "acronyms": ["HU"]
+    }
+  ]
+}

@@ -12,7 +12,8 @@ use crate::{
         NormalizedPayload,
     },
     sources::{
-        payload_kind_name, FetchOptions, PrepareOptions, ResolvedSource, SourceDefinition, SourceId,
+        is_multiword, validate_payload_kind, FetchOptions, PrepareOptions, ResolvedSource,
+        SourceDefinition, SourceId,
     },
 };
 
@@ -75,18 +76,15 @@ pub(crate) fn fetch(
 
 pub(crate) fn prepare(raw: &[u8], options: PrepareOptions) -> Result<NormalizedPayload> {
     let requested_kind = options.payload_kind.unwrap_or(PreparePayloadKind::MultiwordMap);
-    if !matches!(
+    validate_payload_kind(
+        SourceId::Orcid,
         requested_kind,
-        PreparePayloadKind::CanonicalMap
-            | PreparePayloadKind::MultiwordMap
-            | PreparePayloadKind::ProtectedSpellings
-    ) {
-        return Err(CliError::SourceMetadata(format!(
-            "{} supports only --payload-kind canonical-map, multiword-map, or protected-spellings (received {})",
-            SourceId::Orcid.as_str(),
-            payload_kind_name(requested_kind)
-        )));
-    }
+        &[
+            PreparePayloadKind::CanonicalMap,
+            PreparePayloadKind::MultiwordMap,
+            PreparePayloadKind::ProtectedSpellings,
+        ],
+    )?;
 
     let batch: OrcidRawBatch = serde_json::from_slice(raw)?;
     let mut single_word_entries = Vec::new();
@@ -159,10 +157,6 @@ fn xml_error(error: impl std::fmt::Display) -> CliError {
         path: std::path::PathBuf::from("<memory>"),
         message: format!("invalid ORCID XML payload: {error}"),
     }
-}
-
-fn is_multiword(value: &str) -> bool {
-    value.split_whitespace().nth(1).is_some()
 }
 
 #[derive(Debug, Serialize, Deserialize)]

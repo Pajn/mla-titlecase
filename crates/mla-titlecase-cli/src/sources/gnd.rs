@@ -5,13 +5,14 @@ use serde::Deserialize;
 
 use crate::{
     cli::PreparePayloadKind,
-    error::{CliError, Result},
+    error::Result,
     normalize::{
         canonical_map_payload, multiword_map_payload, protected_spellings_payload,
         NormalizedPayload,
     },
     sources::{
-        payload_kind_name, FetchOptions, PrepareOptions, ResolvedSource, SourceDefinition, SourceId,
+        is_multiword, validate_payload_kind, FetchOptions, PrepareOptions, ResolvedSource,
+        SourceDefinition, SourceId,
     },
 };
 
@@ -63,18 +64,15 @@ pub(crate) fn fetch(
 
 pub(crate) fn prepare(raw: &[u8], options: PrepareOptions) -> Result<NormalizedPayload> {
     let requested_kind = options.payload_kind.unwrap_or(PreparePayloadKind::MultiwordMap);
-    if !matches!(
+    validate_payload_kind(
+        SourceId::Gnd,
         requested_kind,
-        PreparePayloadKind::CanonicalMap
-            | PreparePayloadKind::MultiwordMap
-            | PreparePayloadKind::ProtectedSpellings
-    ) {
-        return Err(CliError::SourceMetadata(format!(
-            "{} supports only --payload-kind canonical-map, multiword-map, or protected-spellings (received {})",
-            SourceId::Gnd.as_str(),
-            payload_kind_name(requested_kind)
-        )));
-    }
+        &[
+            PreparePayloadKind::CanonicalMap,
+            PreparePayloadKind::MultiwordMap,
+            PreparePayloadKind::ProtectedSpellings,
+        ],
+    )?;
 
     let parsed = parse_records(raw)?;
     let mut payload = match requested_kind {
@@ -118,10 +116,6 @@ fn parse_records(raw: &[u8]) -> Result<ParsedRecords> {
     }
 
     Ok(ParsedRecords { single_word_entries, multiword_entries, ignored_records })
-}
-
-fn is_multiword(value: &str) -> bool {
-    value.split_whitespace().nth(1).is_some()
 }
 
 #[derive(Debug, Deserialize)]

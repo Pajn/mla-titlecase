@@ -1,0 +1,16 @@
+{
+  "main": {
+    "en": {
+      "localeDisplayNames": {
+        "territories": {
+          "GB": "United Kingdom",
+          "KR": "South Korea",
+          "FR": "France",
+          "US-alt-short": "US",
+          "001": "world",
+          "142": "Asia"
+        }
+      }
+    }
+  }
+}
