@@ -108,6 +108,7 @@ fn keeps_default_english_behavior_stable() {
 #[test]
 fn preserves_acronyms_and_dotted_abbreviations() {
     assert_eq!(titlecase_mla("nasa and the u.s.a. mission"), "NASA and the U.S.A. Mission");
+    assert_eq!(titlecase_mla("meet me at 9 a.m. sharp"), "Meet Me at 9 a.m. Sharp");
 }
 
 #[test]

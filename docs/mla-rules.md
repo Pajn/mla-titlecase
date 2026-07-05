@@ -28,7 +28,7 @@ When `capitalize_after_colon` is enabled (the default), a colon is treated as a 
 
 - all-caps acronyms such as `NASA` are preserved
 - dotted initialisms such as `u.s.a.` normalize to `U.S.A.`
-- lowercase dotted abbreviations like `e.g.` and `i.e.` remain lowercase
+- lowercase dotted abbreviations like `e.g.`, `i.e.`, `a.m.`, and `p.m.` remain lowercase
 
 ## Protected spellings
 

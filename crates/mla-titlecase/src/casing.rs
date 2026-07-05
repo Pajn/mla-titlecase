@@ -61,7 +61,7 @@ pub(crate) fn style_word(word: &str, capitalize: bool, options: &TitleCaseOption
 }
 
 fn style_dotted_abbreviation(word: &str) -> String {
-    const LOWERCASE_DOTTED_ABBREVIATIONS: &[&str] = &["e.g.", "i.e."];
+    const LOWERCASE_DOTTED_ABBREVIATIONS: &[&str] = &["a.m.", "e.g.", "i.e.", "p.m."];
 
     let lowered = word.to_lowercase();
     if LOWERCASE_DOTTED_ABBREVIATIONS.contains(&lowered.as_str()) {
@@ -122,6 +122,8 @@ mod tests {
         let options = TitleCaseOptions::default();
         assert_eq!(style_word("u.s.a.", true, &options), "U.S.A.");
         assert_eq!(style_word("e.g.", true, &options), "e.g.");
+        assert_eq!(style_word("a.m.", true, &options), "a.m.");
+        assert_eq!(style_word("p.m.", true, &options), "p.m.");
     }
 
     #[test]
