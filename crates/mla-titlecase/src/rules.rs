@@ -4,9 +4,9 @@ use crate::config::{
     TitleCaseOptions, UnknownWordCasing,
 };
 use crate::context::{
-    first_significant_word, followed_by_hyphen, follows_colon, last_significant_word,
-    likely_adverbial_particle, likely_name_particle_context, part_of_hyphenated_compound,
-    preceded_by_hyphen, precedes_colon,
+    first_significant_word, followed_by_hyphen, follows_colon, is_contracted_and,
+    last_significant_word, likely_adverbial_particle, likely_name_particle_context,
+    part_of_hyphenated_compound, preceded_by_hyphen, precedes_colon,
 };
 use crate::lexicon::{
     abbreviation_spelling, built_in_protected_spelling, is_name_particle_for_locale, is_small_word,
@@ -70,12 +70,14 @@ pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> Str
             continue;
         }
 
-        if should_force_lowercase(&key, should_capitalize, tokens, index, options) {
-            // Small words and name particles matched against Latin-script
-            // function-word lists, so they lowercase the English way. Locale
-            // casing (e.g. Turkish dotless `ı`) applies only to genuine title
-            // words, keeping "IN" -> "in" rather than "ın" under the Turkish
-            // profile.
+        // Words lowered here matched Latin-script function-word lists (small
+        // words, name particles, the "'n'" contraction), so they lowercase the
+        // English way. Locale casing (e.g. Turkish dotless `ı`) applies only to
+        // genuine title words, keeping "IN" -> "in" rather than "ın".
+        if (!should_capitalize && is_contracted_and(tokens, index, &key))
+            || is_lowerable_name_particle(&key, should_capitalize, tokens, index, options)
+            || should_force_lowercase(&key, should_capitalize, tokens, index, options)
+        {
             output.push_str(&lowercase_word(token.text, LocaleProfile::English));
             index += 1;
             continue;
@@ -91,16 +93,6 @@ pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> Str
             options.external_lexicons.and_then(|lexicons| lexicons.canonical_spelling(token.text))
         {
             output.push_str(canonical);
-            index += 1;
-            continue;
-        }
-
-        if options.name_particle_policy == NameParticlePolicy::Heuristic
-            && is_name_particle_for_locale(&key, options.locale)
-            && !should_capitalize
-            && likely_name_particle_context(tokens, index)
-        {
-            output.push_str(&lowercase_word(token.text, LocaleProfile::English));
             index += 1;
             continue;
         }
@@ -196,6 +188,22 @@ fn protected_spelling<'a>(
         })
 }
 
+/// True when the name-particle heuristic should lower this word. Independent of
+/// the small-word policy, so a particle such as `van` still lowers inside a
+/// likely personal name even when general small-word lowering is off.
+fn is_lowerable_name_particle(
+    key: &str,
+    should_capitalize: bool,
+    tokens: &[Token<'_>],
+    index: usize,
+    options: &TitleCaseOptions<'_>,
+) -> bool {
+    !should_capitalize
+        && options.name_particle_policy == NameParticlePolicy::Heuristic
+        && is_name_particle_for_locale(key, options.locale)
+        && likely_name_particle_context(tokens, index)
+}
+
 fn should_force_lowercase(
     key: &str,
     should_capitalize: bool,
@@ -203,15 +211,8 @@ fn should_force_lowercase(
     index: usize,
     options: &TitleCaseOptions<'_>,
 ) -> bool {
-    if should_capitalize || !options.lowercase_small_words {
+    if should_capitalize {
         return false;
-    }
-
-    if options.name_particle_policy == NameParticlePolicy::Heuristic
-        && is_name_particle_for_locale(key, options.locale)
-        && likely_name_particle_context(tokens, index)
-    {
-        return true;
     }
 
     // MLA capitalizes adverbs, so a small word acting as an adverbial

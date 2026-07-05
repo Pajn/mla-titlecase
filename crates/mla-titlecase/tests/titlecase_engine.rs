@@ -190,6 +190,29 @@ fn keeps_contraction_endings_lowercase() {
 }
 
 #[test]
+fn keeps_contracted_and_lowercase() {
+    assert_eq!(titlecase_mla("rock 'n' roll forever"), "Rock 'n' Roll Forever");
+    assert_eq!(titlecase_mla("fish 'n' chips"), "Fish 'n' Chips");
+    // A standalone "n" that is not the 'n' contraction is capitalized normally.
+    assert_eq!(titlecase_mla("plan n for later"), "Plan N for Later");
+}
+
+#[test]
+fn lowers_name_particles_even_when_small_words_are_not() {
+    // With NeverLowercase small words keep their capitals, but the name-particle
+    // heuristic still lowers particles inside a likely personal name.
+    let options = TitleCaseOptions {
+        small_word_policy: SmallWordPolicy::NeverLowercase,
+        name_particle_policy: NameParticlePolicy::Heuristic,
+        ..TitleCaseOptions::default()
+    };
+    assert_eq!(
+        titlecase_with_options("ludwig van beethoven in concert", &options),
+        "Ludwig van Beethoven In Concert"
+    );
+}
+
+#[test]
 fn keeps_ordinal_suffixes_lowercase() {
     assert_eq!(titlecase_mla("miracle on 34th street"), "Miracle on 34th Street");
     assert_eq!(titlecase_mla("42nd street"), "42nd Street");

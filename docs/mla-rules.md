@@ -8,7 +8,9 @@ The built-in small-word list follows MLA's part-of-speech rule: it lowercases ar
 
 Subordinating conjunctions such as `if`, `that`, `than`, `once`, and `because` are capitalized, as MLA requires. Words that can be either a preposition or a subordinating conjunction (`after`, `before`, `since`, `till`, `until`) are treated as prepositions and lowercased, the more common reading in titles.
 
-By default these words are lowercased only when they appear internally.
+By default these words are lowercased only when they appear internally. Set `small_word_policy` to `SmallWordPolicy::NeverLowercase` to disable small-word lowering entirely.
+
+The `n` written as `'n'` with flanking apostrophes is treated as a contraction of "and" and stays lowercase (`Rock 'n' Roll`, `Fish 'n' Chips`), independent of the small-word policy.
 
 ## Adverbial particles
 
