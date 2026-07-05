@@ -17,5 +17,4 @@ jobs:
   rustdoc:
     uses: ./.github/workflows/reusable-rust-validate.yml
     with:
-      toolchain: stable
       run_examples: false
