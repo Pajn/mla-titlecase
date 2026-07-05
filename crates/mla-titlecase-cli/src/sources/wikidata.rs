@@ -151,7 +151,7 @@ fn parse_rows(raw: &[u8]) -> Result<ParsedRows> {
             continue;
         };
 
-        for surface in std::iter::once(label).chain(entity.aliases.into_iter()) {
+        for surface in std::iter::once(label).chain(entity.aliases) {
             if is_multiword(&surface) {
                 multiword_entries.push((surface.clone(), surface));
             } else {
