@@ -14,6 +14,56 @@ pub enum SmallWordPolicy {
     NeverLowercase,
 }
 
+/// Controls how fully all-caps ("shouting") input is handled.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum AllCapsPolicy {
+    /// Recase all-caps input to title case, restoring known abbreviations and
+    /// protected spellings. This is the default MLA behavior.
+    Normalize,
+    /// Treat all-caps input as intentional stylization and leave every word as
+    /// written (`MONTERO`, `STAY`). Useful for music and brand metadata.
+    Preserve,
+    /// Recase all-caps input using a loaded dictionary word-set: words the
+    /// dictionary recognizes are always title-cased, while unrecognized words
+    /// are handled per [`UnknownWordCasing`]. With SCOWL loaded and unknowns
+    /// preserved, a recognized word recases while an unknown name stays as
+    /// written (`SHERLOCK HISTORY` -> `SHERLOCK History`). Behaves like
+    /// [`AllCapsPolicy::Normalize`] when no word-set lexicon is loaded, so it
+    /// expects a comprehensive membership source such as SCOWL.
+    NormalizeKnownWords {
+        /// How to cast all-caps words the dictionary does not recognize.
+        unknown: UnknownWordCasing,
+    },
+}
+
+/// How [`AllCapsPolicy::NormalizeKnownWords`] casts all-caps words that the
+/// loaded dictionary does not recognize.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum UnknownWordCasing {
+    /// Keep every unrecognized word as written, assuming it is an acronym
+    /// (`SHERLOCK` stays `SHERLOCK`). An external canonical map or protected
+    /// spelling can still restore a genuine name's casing.
+    Preserve,
+    /// Title-case every unrecognized word, assuming it is an ordinary word or
+    /// name (`SHERLOCK` becomes `Sherlock`). With this setting the dictionary
+    /// gate has no visible effect on output, so it matches
+    /// [`AllCapsPolicy::Normalize`].
+    TitleCase,
+    /// Preserve short unrecognized words as acronyms but title-case longer ones,
+    /// on the heuristic that acronyms are short (`IBM`, `NASA`) while names and
+    /// ordinary words are longer (`SHERLOCK` -> `Sherlock`). A word is preserved
+    /// when its letter count is at most `max_acronym_len`; a value around 4 or 5
+    /// is a reasonable starting point. Necessarily imperfect: short names
+    /// (`LEE`) are preserved and long acronyms (`SCOTUS`) are title-cased, so
+    /// pin the exceptions with a canonical map or protected spellings.
+    PreserveShortAcronyms {
+        /// Maximum letter count preserved as an acronym; longer words title-case.
+        max_acronym_len: usize,
+    },
+}
+
 /// Controls how hyphenated compounds are cased.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HyphenStyle {
@@ -59,12 +109,13 @@ pub struct TitleCaseOptions<'a> {
     /// Treat colons as subtitle boundaries: capitalize the first significant
     /// word after a colon and the last one before it.
     pub capitalize_after_colon: bool,
-    /// Lowercase MLA small words when they appear internally.
-    pub lowercase_small_words: bool,
     /// Capitalize small words acting as adverbial particles rather than
     /// prepositions (`Give Up`, `Turn Off the Lights`).
     pub capitalize_phrasal_particles: bool,
-    /// Selects the small-word policy to apply.
+    /// Selects how fully all-caps input is handled.
+    pub all_caps_policy: AllCapsPolicy,
+    /// Selects the small-word policy to apply. Use [`SmallWordPolicy::NeverLowercase`]
+    /// to disable small-word lowering entirely.
     pub small_word_policy: SmallWordPolicy,
     /// Selects how hyphenated compounds are handled.
     pub hyphen_style: HyphenStyle,
@@ -83,8 +134,8 @@ impl<'a> Default for TitleCaseOptions<'a> {
         Self {
             preserve_existing_caps: true,
             capitalize_after_colon: true,
-            lowercase_small_words: true,
             capitalize_phrasal_particles: true,
+            all_caps_policy: AllCapsPolicy::Normalize,
             small_word_policy: SmallWordPolicy::Mla,
             hyphen_style: HyphenStyle::MlaLike,
             protected_words: &[],

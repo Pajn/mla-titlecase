@@ -167,6 +167,16 @@ impl ExternalLexicons {
         })
     }
 
+    /// Reports dictionary membership for the all-caps `NormalizeKnownWords`
+    /// policy. Returns `None` when no word-set lexicon is loaded, so callers can
+    /// distinguish "no dictionary available" from "word is absent".
+    pub(crate) fn dictionary_contains(&self, word: &str) -> Option<bool> {
+        if self.word_sets.is_empty() {
+            return None;
+        }
+        Some(self.contains_word(word))
+    }
+
     pub(crate) fn canonical_spelling(&self, word: &str) -> Option<&str> {
         let key = lookup_key(word);
         self.canonical_maps.iter().rev().find_map(|backend| match backend {

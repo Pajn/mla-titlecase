@@ -1,5 +1,5 @@
 use crate::classify::{
-    is_closing_punctuation, is_hyphen, is_opening_punctuation, is_significant_word,
+    is_apostrophe, is_closing_punctuation, is_hyphen, is_opening_punctuation, is_significant_word,
 };
 use crate::lexicon::{is_adverbial_particle, is_phrasal_verb_pair, is_small_word};
 use crate::token::{Token, TokenKind};
@@ -48,6 +48,14 @@ pub(crate) fn precedes_colon(tokens: &[Token<'_>], index: usize) -> bool {
 
 pub(crate) fn part_of_hyphenated_compound(tokens: &[Token<'_>], index: usize) -> bool {
     preceded_by_hyphen(tokens, index) || followed_by_hyphen(tokens, index)
+}
+
+/// True for a lone `n` written as `'n'` with flanking apostrophes, standing in
+/// for "and" as in "Rock 'n' Roll" or "Fish 'n' Chips".
+pub(crate) fn is_contracted_and(tokens: &[Token<'_>], index: usize, key: &str) -> bool {
+    key == "n"
+        && tokens.get(index.wrapping_sub(1)).is_some_and(|token| is_apostrophe(*token))
+        && tokens.get(index + 1).is_some_and(|token| is_apostrophe(*token))
 }
 
 pub(crate) fn preceded_by_hyphen(tokens: &[Token<'_>], index: usize) -> bool {
