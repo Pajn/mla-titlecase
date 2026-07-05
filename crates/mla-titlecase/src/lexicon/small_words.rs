@@ -90,6 +90,16 @@ mod tests {
     }
 
     #[test]
+    fn includes_dual_role_prepositions() {
+        // Documented choice: preposition/conjunction words stay lowercased.
+        assert!(contains("after"));
+        assert!(contains("before"));
+        assert!(contains("since"));
+        assert!(contains("till"));
+        assert!(contains("until"));
+    }
+
+    #[test]
     fn excludes_subordinating_conjunctions() {
         assert!(!contains("if"));
         assert!(!contains("that"));
