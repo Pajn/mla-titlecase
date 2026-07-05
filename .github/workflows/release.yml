@@ -134,6 +134,9 @@ jobs:
     needs: build-cli-binaries
     permissions:
       contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -156,8 +159,6 @@ jobs:
           echo "release_tag=${RELEASE_TAG}" >> "${GITHUB_ENV}"
 
       - name: Create or update GitHub release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: |
           if gh release view "${release_tag}" >/dev/null 2>&1; then
@@ -167,8 +168,6 @@ jobs:
           fi
 
       - name: Upload release artifacts
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
         run: gh release upload "${release_tag}" release-artifacts/*/* --clobber
 
