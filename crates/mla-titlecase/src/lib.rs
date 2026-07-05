@@ -31,7 +31,8 @@ mod token;
 mod tokenizer;
 
 pub use config::{
-    HyphenStyle, LocaleProfile, NameParticlePolicy, SmallWordPolicy, TitleCaseOptions,
+    AllCapsPolicy, HyphenStyle, LocaleProfile, NameParticlePolicy, SmallWordPolicy,
+    TitleCaseOptions, UnknownWordCasing,
 };
 pub use error::{Error, Result};
 pub use lexicon::ExternalLexicons;
