@@ -6,7 +6,7 @@ resolver = "2"
 edition = "2021"
 rust-version = "1.78"
 license = "MIT"
-version = "0.1.1"
+version = "0.2.0"
 repository = "https://github.com/Pajn/mla-titlecase"
 homepage = "https://github.com/Pajn/mla-titlecase"
 documentation = "https://docs.rs/mla-titlecase"
@@ -21,7 +21,7 @@ fst = "0.4"
 flate2 = "1.1"
 hex = "0.4"
 memmap2 = "0.9"
-mla-titlecase = { version = "0.1.1", path = "crates/mla-titlecase" }
+mla-titlecase = { version = "0.2.0", path = "crates/mla-titlecase" }
 predicates = "3.1"
 quick-xml = "0.37"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
