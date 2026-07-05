@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - The built-in abbreviation list grew from 11 to ~50 curated initialisms (`IBM`, `FBI`, `NATO`, `URL`, `PDF`, ...), all guarded to never collide with small words or ordinary English words; `iOS` and `PhD` join the built-in protected spellings.
 - The `n` written as `'n'` with flanking apostrophes is kept lowercase as a contraction of "and" (`Rock 'n' Roll`, `Fish 'n' Chips`).
 - `titlecase_into(&mut out, input, options)` writes the result into a caller-owned buffer (cleared first), letting bulk callers reuse one `String` across many titles to avoid a per-call allocation.
+- `titlecase_analyze` / `titlecase_analyze_with_options` return a `TitleCaseAnalysis`: the cased string, an overall `Confidence` (`Solid` / `Unverified` / `Heuristic`), and one `CasingSpan` per casing decision (usually one per word, but a multiword lexicon match collapses to a single span, and `AllCapsPolicy::Preserve` on shouting input records none) recording the deciding `CasingRule`, its confidence, and a `changed` flag. The overall confidence reflects every recorded span (so a heuristic that kept a word unchanged still counts), letting callers flag titles that relied on a heuristic (particle detection, all-caps word-vs-acronym, dual-role prepositions) for review. The plain path is unaffected: the rule attribution is compiled out of it.
 
 ### Changed
 

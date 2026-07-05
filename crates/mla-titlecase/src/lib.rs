@@ -13,6 +13,7 @@
 //! assert_eq!(titlecase_mla("the wind in the willows"), "The Wind in the Willows");
 //! ```
 
+pub mod analysis;
 pub mod config;
 pub mod error;
 pub mod fst_store;
@@ -30,6 +31,7 @@ mod titlecase;
 mod token;
 mod tokenizer;
 
+pub use analysis::{CasingRule, CasingSpan, Confidence, TitleCaseAnalysis};
 pub use config::{
     AllCapsPolicy, HyphenStyle, LocaleProfile, NameParticlePolicy, SmallWordPolicy,
     TitleCaseOptions, UnknownWordCasing,
@@ -76,4 +78,38 @@ pub fn titlecase_with_options(input: &str, options: &TitleCaseOptions<'_>) -> St
 /// ```
 pub fn titlecase_into(out: &mut String, input: &str, options: &TitleCaseOptions<'_>) {
     titlecase::titlecase_into(out, input, options);
+}
+
+/// Converts `input` to MLA-style title case with the default options and returns
+/// a [`TitleCaseAnalysis`]: the cased string plus one span per casing decision,
+/// in order. That is usually one span per word, but a multiword lexicon match
+/// records a single span for the whole phrase, and all-caps input under
+/// [`AllCapsPolicy::Preserve`] records none. Each span carries the rule and
+/// confidence behind its casing; filter on [`CasingSpan::changed`] for only the
+/// words the engine modified.
+///
+/// # Examples
+///
+/// ```
+/// use mla_titlecase::{titlecase_analyze, CasingRule, Confidence};
+///
+/// let analysis = titlecase_analyze("turn off the lights");
+/// assert_eq!(analysis.output, "Turn Off the Lights");
+/// // The phrasal-verb particle is a heuristic, so the title is flagged.
+/// assert_eq!(analysis.confidence, Confidence::Heuristic);
+/// assert!(analysis.spans.iter().any(|span| span.rule == CasingRule::AdverbialParticle));
+/// ```
+#[must_use]
+pub fn titlecase_analyze(input: &str) -> TitleCaseAnalysis {
+    titlecase::titlecase_analyze(input, &TitleCaseOptions::default())
+}
+
+/// Converts `input` to MLA-style title case using explicit options and returns a
+/// [`TitleCaseAnalysis`]. See [`titlecase_analyze`].
+#[must_use]
+pub fn titlecase_analyze_with_options(
+    input: &str,
+    options: &TitleCaseOptions<'_>,
+) -> TitleCaseAnalysis {
+    titlecase::titlecase_analyze(input, options)
 }

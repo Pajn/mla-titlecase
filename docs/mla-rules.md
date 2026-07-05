@@ -91,6 +91,20 @@ When `NameParticlePolicy::Heuristic` is enabled, common particles such as `van`,
 
 Locale profiles widen that heuristic carefully for supported languages such as Dutch, French, German, Italian, Spanish, and Turkish while keeping the default English MLA path unchanged.
 
+## Rich analysis output
+
+`titlecase_analyze` (and `titlecase_analyze_with_options`) return a `TitleCaseAnalysis` alongside the cased string: an overall `Confidence` and one `CasingSpan` per casing decision. That is usually one span per word, but a multiword lexicon match collapses to a single span covering the whole phrase, and `AllCapsPolicy::Preserve` on shouting input records no spans (the input is returned verbatim). Each span carries byte ranges into the input and output, the deciding `CasingRule`, a per-span `Confidence`, and a `changed` flag.
+
+`Confidence` has three tiers:
+
+- `Solid` — a structural MLA rule (first/last word, colon boundary, hyphenated-compound start) or an explicit match (protected spelling, abbreviation, dotted initialism, canonical/multiword lexicon, `'n'` contraction, small word, preserved mixed case).
+- `Unverified` — an ordinary word capitalized with no lexicon to confirm it is not a name or brand. Correct under MLA, but the open-world "a lexicon might disagree" case applies to nearly every plain word, so it is a separate, lower-priority tier rather than an ambiguity flag.
+- `Heuristic` — a decision that could genuinely be wrong: adverbial-particle detection, the name-particle heuristic, all-caps word-versus-acronym classification, and the dual-role prepositions (`after`, `before`, `since`, `till`, `until`).
+
+The title's overall `confidence` is the most concerning tier across every word, so a caller can triage: `Heuristic` titles are the ones most worth a human look. Every word token produces a span, in order; filter on `CasingSpan::changed` to get just the edits. Recording unchanged words too means a heuristic that kept a word as-is — for example a name particle already lowercase in the input — still surfaces and still affects the overall confidence.
+
+The plain `titlecase_*` functions do not compute any of this — the attribution work is compiled out of that path.
+
 ## Known boundaries
 
 This crate is intentionally MLA-centric. It does not try to become a full named-entity recognizer or a multi-style-guide formatter.
