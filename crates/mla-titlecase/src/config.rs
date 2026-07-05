@@ -109,14 +109,13 @@ pub struct TitleCaseOptions<'a> {
     /// Treat colons as subtitle boundaries: capitalize the first significant
     /// word after a colon and the last one before it.
     pub capitalize_after_colon: bool,
-    /// Lowercase MLA small words when they appear internally.
-    pub lowercase_small_words: bool,
     /// Capitalize small words acting as adverbial particles rather than
     /// prepositions (`Give Up`, `Turn Off the Lights`).
     pub capitalize_phrasal_particles: bool,
     /// Selects how fully all-caps input is handled.
     pub all_caps_policy: AllCapsPolicy,
-    /// Selects the small-word policy to apply.
+    /// Selects the small-word policy to apply. Use [`SmallWordPolicy::NeverLowercase`]
+    /// to disable small-word lowering entirely.
     pub small_word_policy: SmallWordPolicy,
     /// Selects how hyphenated compounds are handled.
     pub hyphen_style: HyphenStyle,
@@ -135,7 +134,6 @@ impl<'a> Default for TitleCaseOptions<'a> {
         Self {
             preserve_existing_caps: true,
             capitalize_after_colon: true,
-            lowercase_small_words: true,
             capitalize_phrasal_particles: true,
             all_caps_policy: AllCapsPolicy::Normalize,
             small_word_policy: SmallWordPolicy::Mla,
