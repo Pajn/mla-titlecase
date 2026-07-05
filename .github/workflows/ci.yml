@@ -18,5 +18,3 @@ concurrency:
 jobs:
   validate:
     uses: ./.github/workflows/reusable-rust-validate.yml
-    with:
-      toolchain: stable

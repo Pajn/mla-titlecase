@@ -3,10 +3,6 @@ name: reusable-rust-validate
 on:
   workflow_call:
     inputs:
-      toolchain:
-        required: false
-        type: string
-        default: stable
       run_examples:
         required: false
         type: boolean
@@ -25,9 +21,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ inputs.toolchain }}
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install
 
       - uses: Swatinem/rust-cache@v2
 
