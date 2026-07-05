@@ -100,14 +100,23 @@ jobs:
           mkdir -p "${ARCHIVE_DIR}"
           cp README.md LICENSE "${ARCHIVE_DIR}/"
 
+          # macOS runners ship `shasum` rather than coreutils' `sha256sum`.
+          write_sha256() {
+            if command -v sha256sum >/dev/null 2>&1; then
+              sha256sum "$1" > "$1.sha256"
+            else
+              shasum -a 256 "$1" > "$1.sha256"
+            fi
+          }
+
           if [[ "${TARGET}" == *windows* ]]; then
             cp "target/${TARGET}/release/mla-titlecase.exe" "${ARCHIVE_DIR}/mla-titlecase.exe"
             7z a "${archive_base}.zip" "./${ARCHIVE_DIR}/*"
-            sha256sum "${archive_base}.zip" > "${archive_base}.zip.sha256"
+            write_sha256 "${archive_base}.zip"
           else
             cp "target/${TARGET}/release/mla-titlecase" "${ARCHIVE_DIR}/mla-titlecase"
             tar -czf "${archive_base}.tgz" "${ARCHIVE_DIR}"
-            sha256sum "${archive_base}.tgz" > "${archive_base}.tgz.sha256"
+            write_sha256 "${archive_base}.tgz"
           fi
 
       - name: Upload packaged artifacts
