@@ -1,8 +1,8 @@
 //! Integration tests for the MLA title-casing engine.
 
 use mla_titlecase::{
-    titlecase_mla, titlecase_with_options, ExternalLexicons, HyphenStyle, LocaleProfile,
-    NameParticlePolicy, SmallWordPolicy, TitleCaseOptions,
+    titlecase_mla, titlecase_with_options, AllCapsPolicy, ExternalLexicons, HyphenStyle,
+    LocaleProfile, NameParticlePolicy, SmallWordPolicy, TitleCaseOptions, UnknownWordCasing,
 };
 
 #[test]
@@ -190,6 +190,29 @@ fn keeps_contraction_endings_lowercase() {
 }
 
 #[test]
+fn keeps_contracted_and_lowercase() {
+    assert_eq!(titlecase_mla("rock 'n' roll forever"), "Rock 'n' Roll Forever");
+    assert_eq!(titlecase_mla("fish 'n' chips"), "Fish 'n' Chips");
+    // A standalone "n" that is not the 'n' contraction is capitalized normally.
+    assert_eq!(titlecase_mla("plan n for later"), "Plan N for Later");
+}
+
+#[test]
+fn lowers_name_particles_even_when_small_words_are_not() {
+    // With NeverLowercase small words keep their capitals, but the name-particle
+    // heuristic still lowers particles inside a likely personal name.
+    let options = TitleCaseOptions {
+        small_word_policy: SmallWordPolicy::NeverLowercase,
+        name_particle_policy: NameParticlePolicy::Heuristic,
+        ..TitleCaseOptions::default()
+    };
+    assert_eq!(
+        titlecase_with_options("ludwig van beethoven in concert", &options),
+        "Ludwig van Beethoven In Concert"
+    );
+}
+
+#[test]
 fn keeps_ordinal_suffixes_lowercase() {
     assert_eq!(titlecase_mla("miracle on 34th street"), "Miracle on 34th Street");
     assert_eq!(titlecase_mla("42nd street"), "42nd Street");
@@ -202,6 +225,125 @@ fn recases_all_caps_input() {
     // A lone all-caps word is still treated as an acronym.
     assert_eq!(titlecase_mla("NASA"), "NASA");
     assert_eq!(titlecase_mla("the NASA years"), "The NASA Years");
+    // Known abbreviations survive the all-caps recasing.
+    assert_eq!(titlecase_mla("IBM AND NASA HISTORY"), "IBM and NASA History");
+}
+
+#[test]
+fn preserves_all_caps_input_under_preserve_policy() {
+    let options = TitleCaseOptions {
+        all_caps_policy: AllCapsPolicy::Preserve,
+        ..TitleCaseOptions::default()
+    };
+    // Intentional stylization is returned verbatim: no recasing, no small-word
+    // lowering.
+    assert_eq!(titlecase_with_options("STAY WITH ME", &options), "STAY WITH ME");
+    assert_eq!(titlecase_with_options("MONTERO", &options), "MONTERO");
+    // Mixed-case input is not shouting, so the policy leaves it to normal rules.
+    assert_eq!(
+        titlecase_with_options("the wind in the willows", &options),
+        "The Wind in the Willows"
+    );
+}
+
+#[test]
+fn recases_known_words_and_preserves_unknown_acronyms() {
+    let mut dictionary = ExternalLexicons::default();
+    dictionary.add_word_set(["history", "years", "handbook"]);
+    let options = TitleCaseOptions {
+        all_caps_policy: AllCapsPolicy::NormalizeKnownWords {
+            unknown: UnknownWordCasing::Preserve,
+        },
+        external_lexicons: Some(&dictionary),
+        ..TitleCaseOptions::default()
+    };
+
+    // NASA is restored by the built-in abbreviation table; "history" is a
+    // dictionary word, so it recases. Neither exercises the dictionary gate on
+    // its own.
+    assert_eq!(titlecase_with_options("NASA HISTORY", &options), "NASA History");
+    // The NormalizeKnownWords + Preserve behavior itself: unknown names, absent
+    // from both the dictionary and the abbreviation table, stay all-caps unless
+    // a canonical map restores them.
+    assert_eq!(titlecase_with_options("SHERLOCK HOLMES", &options), "SHERLOCK HOLMES");
+
+    // With no dictionary loaded, the policy falls back to full normalization.
+    let no_dictionary = TitleCaseOptions {
+        all_caps_policy: AllCapsPolicy::NormalizeKnownWords {
+            unknown: UnknownWordCasing::Preserve,
+        },
+        ..TitleCaseOptions::default()
+    };
+    assert_eq!(
+        titlecase_with_options("THE WIND IN THE WILLOWS", &no_dictionary),
+        "The Wind in the Willows"
+    );
+}
+
+#[test]
+fn title_cases_unknown_words_when_requested() {
+    let mut dictionary = ExternalLexicons::default();
+    dictionary.add_word_set(["history", "years", "handbook"]);
+    let options = TitleCaseOptions {
+        all_caps_policy: AllCapsPolicy::NormalizeKnownWords {
+            unknown: UnknownWordCasing::TitleCase,
+        },
+        external_lexicons: Some(&dictionary),
+        ..TitleCaseOptions::default()
+    };
+
+    // Unknown words are now title-cased instead of preserved as acronyms.
+    assert_eq!(titlecase_with_options("SHERLOCK HOLMES", &options), "Sherlock Holmes");
+    // Known abbreviations are still restored, and dictionary words still recase.
+    assert_eq!(titlecase_with_options("NASA HISTORY", &options), "NASA History");
+    // With unknowns title-cased, the result matches plain `Normalize`.
+    assert_eq!(
+        titlecase_with_options("SHERLOCK HOLMES", &options),
+        titlecase_mla("SHERLOCK HOLMES")
+    );
+}
+
+#[test]
+fn preserves_short_unknown_words_as_acronyms() {
+    let mut dictionary = ExternalLexicons::default();
+    dictionary.add_word_set(["report", "and", "the"]);
+    let options = TitleCaseOptions {
+        all_caps_policy: AllCapsPolicy::NormalizeKnownWords {
+            unknown: UnknownWordCasing::PreserveShortAcronyms { max_acronym_len: 4 },
+        },
+        external_lexicons: Some(&dictionary),
+        ..TitleCaseOptions::default()
+    };
+
+    // Short unknown words (<= 4 letters) are preserved as likely acronyms;
+    // longer unknown words are title-cased as likely names.
+    assert_eq!(
+        titlecase_with_options("THE NSA AND SHERLOCK REPORT", &options),
+        "The NSA and Sherlock Report"
+    );
+    // The threshold is inclusive: a 4-letter unknown (not on the built-in
+    // abbreviation list) is still preserved.
+    assert_eq!(titlecase_with_options("GAAP REPORT", &options), "GAAP Report");
+}
+
+#[test]
+fn capitalizes_first_element_of_hyphenated_compound() {
+    // The first element is capitalized even when it is a small word; interior
+    // small words still lowercase.
+    assert_eq!(titlecase_mla("a by-product of war"), "A By-Product of War");
+    assert_eq!(titlecase_mla("the in-between"), "The In-Between");
+    assert_eq!(titlecase_mla("life in the on-season"), "Life in the On-Season");
+    // The established interior-lowering behavior is unchanged.
+    assert_eq!(titlecase_mla("state-of-the-art design"), "State-of-the-Art Design");
+}
+
+#[test]
+fn lowercases_english_small_words_under_non_english_locale() {
+    let options = TitleCaseOptions::with_locale(LocaleProfile::Turkish);
+    // "in" is an English small word matched by the built-in list; it must
+    // lowercase to ASCII "in", not Turkish dotless "ın".
+    let cased = titlecase_with_options("ISTANBUL IN WINTER", &options);
+    assert!(cased.contains(" in "), "expected ASCII 'in', got {cased}");
 }
 
 #[test]
