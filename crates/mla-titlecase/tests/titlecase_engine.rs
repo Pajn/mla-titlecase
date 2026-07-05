@@ -43,6 +43,13 @@ fn handles_hyphenated_compounds() {
         titlecase_with_options("state-of-the-art design", &options),
         "State-Of-The-Art Design"
     );
+
+    // An em dash separates clauses; it is not a compound hyphen even under
+    // CapitalizeBoth.
+    assert_eq!(
+        titlecase_with_options("well-known\u{2014}a memoir of sorts", &options),
+        "Well-Known\u{2014}a Memoir of Sorts"
+    );
 }
 
 #[test]

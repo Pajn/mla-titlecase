@@ -9,6 +9,7 @@ All notable changes to this project will be documented in this file.
 - The small-word list now follows MLA's part-of-speech rule: subordinating conjunctions (`if`, `that`, `than`, `once`) are capitalized, and prepositions of any length (`about`, `among`, `between`, `despite`, `throughout`, `without`, ...) are lowercased.
 - Colons are treated as subtitle boundaries on both sides: the last significant word before a colon is now capitalized (`What Dreams Are Made Of: A Study`), matching MLA's first-and-last-word rule for titles and subtitles.
 - `a.m.` and `p.m.` join `e.g.` and `i.e.` as dotted abbreviations that stay lowercase instead of being uppercased as initialisms.
+- Figure, en, and em dashes are no longer treated as compound hyphens; only `-`, U+2010, and U+2011 join hyphenated compounds.
 
 ### Fixed
 

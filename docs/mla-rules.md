@@ -24,6 +24,8 @@ When `capitalize_after_colon` is enabled (the default), a colon is treated as a 
 
 `HyphenStyle::CapitalizeBoth` forces capitalization of each segment in a hyphenated compound.
 
+Only true hyphens (`-`, U+2010, U+2011) join compounds. Figure, en, and em dashes separate clauses and are treated as ordinary punctuation.
+
 ## Acronyms and dotted abbreviations
 
 - all-caps acronyms such as `NASA` are preserved
