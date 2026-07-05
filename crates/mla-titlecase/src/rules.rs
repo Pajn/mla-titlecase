@@ -13,6 +13,7 @@ use crate::util::normalize::lookup_key;
 pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> String {
     let first = first_significant_word(tokens);
     let last = last_significant_word(tokens);
+    let normalize_all_caps = input_is_all_caps(tokens);
     let mut output = String::with_capacity(tokens.iter().map(|token| token.text.len()).sum());
 
     let mut index = 0_usize;
@@ -82,11 +83,44 @@ pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> Str
             continue;
         }
 
-        output.push_str(&style_word(token.text, true, options));
+        if normalize_all_caps {
+            output.push_str(&style_word(
+                &lowercase_word(token.text, options.locale),
+                true,
+                options,
+            ));
+        } else {
+            output.push_str(&style_word(token.text, true, options));
+        }
         index += 1;
     }
 
     output
+}
+
+/// Detects shouting input such as `THE WIND IN THE WILLOWS`, where acronym and
+/// mixed-case preservation would otherwise leave every word untouched. A single
+/// all-caps word is more likely a genuine acronym, so it stays preserved.
+fn input_is_all_caps(tokens: &[Token<'_>]) -> bool {
+    let mut cased_words = 0_usize;
+    for token in tokens {
+        if !token.is_word() {
+            continue;
+        }
+        let mut has_cased_letter = false;
+        for ch in token.text.chars() {
+            if ch.is_lowercase() {
+                return false;
+            }
+            if ch.is_uppercase() {
+                has_cased_letter = true;
+            }
+        }
+        if has_cased_letter {
+            cased_words += 1;
+        }
+    }
+    cased_words > 1
 }
 
 fn protected_spelling<'a>(
