@@ -40,6 +40,8 @@ The engine preserves:
 - built-in spellings like `GitHub`, `iPhone`, and `macOS`
 - external protected-spelling plugins
 
+Protected spellings always win: a protected word is never recased, even when it matches the small-word list or an `AlwaysLowercase` word-set entry.
+
 ## Multiword external mappings
 
 When callers load `MultiwordMap` plugins, the engine attempts longest-match phrase lookups across whitespace-separated word runs before it falls back to single-token external maps.

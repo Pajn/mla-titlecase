@@ -83,6 +83,24 @@ fn supports_additive_external_lexicons() {
 }
 
 #[test]
+fn protected_spellings_survive_small_word_lowering() {
+    // "via" is a built-in small word, but the protected spelling wins.
+    let options = TitleCaseOptions::with_protected_words(&["VIA"]);
+    assert_eq!(titlecase_with_options("traveling via rail", &options), "Traveling VIA Rail");
+
+    // An AlwaysLowercase word-set entry does not override a protected spelling.
+    let mut lexicons = ExternalLexicons::default();
+    lexicons.add_protected_spellings([("github", "GitHub")]);
+    lexicons.add_word_set(["github"]);
+    let options = TitleCaseOptions {
+        external_lexicons: Some(&lexicons),
+        small_word_policy: SmallWordPolicy::AlwaysLowercase,
+        ..TitleCaseOptions::default()
+    };
+    assert_eq!(titlecase_with_options("learning github daily", &options), "Learning GitHub Daily");
+}
+
+#[test]
 fn supports_name_particle_heuristics() {
     let options = TitleCaseOptions {
         name_particle_policy: NameParticlePolicy::Heuristic,
