@@ -97,3 +97,34 @@ fn keeps_default_english_behavior_stable() {
 fn preserves_acronyms_and_dotted_abbreviations() {
     assert_eq!(titlecase_mla("nasa and the u.s.a. mission"), "NASA and the U.S.A. Mission");
 }
+
+#[test]
+fn keeps_contraction_endings_lowercase() {
+    assert_eq!(titlecase_mla("don't look up"), "Don't Look Up");
+    assert_eq!(titlecase_mla("it's a wonderful life"), "It's a Wonderful Life");
+    assert_eq!(titlecase_mla("the man who wasn't there"), "The Man Who Wasn't There");
+    assert_eq!(titlecase_mla("o'neill's journey"), "O'Neill's Journey");
+}
+
+#[test]
+fn keeps_ordinal_suffixes_lowercase() {
+    assert_eq!(titlecase_mla("miracle on 34th street"), "Miracle on 34th Street");
+    assert_eq!(titlecase_mla("42nd street"), "42nd Street");
+}
+
+#[test]
+fn recases_all_caps_input() {
+    assert_eq!(titlecase_mla("THE WIND IN THE WILLOWS"), "The Wind in the Willows");
+    assert_eq!(titlecase_mla("MLA HANDBOOK"), "MLA Handbook");
+    // A lone all-caps word is still treated as an acronym.
+    assert_eq!(titlecase_mla("NASA"), "NASA");
+    assert_eq!(titlecase_mla("the NASA years"), "The NASA Years");
+}
+
+#[test]
+fn capitalizes_after_colon_through_curly_quotes() {
+    assert_eq!(
+        titlecase_mla("title: \u{201C}the sequel\u{201D}"),
+        "Title: \u{201C}The Sequel\u{201D}"
+    );
+}
