@@ -1,9 +1,28 @@
 //! Integration tests for the MLA title-casing engine.
 
 use mla_titlecase::{
-    titlecase_mla, titlecase_with_options, AllCapsPolicy, ExternalLexicons, HyphenStyle,
-    LocaleProfile, NameParticlePolicy, SmallWordPolicy, TitleCaseOptions, UnknownWordCasing,
+    titlecase_into, titlecase_mla, titlecase_with_options, AllCapsPolicy, ExternalLexicons,
+    HyphenStyle, LocaleProfile, NameParticlePolicy, SmallWordPolicy, TitleCaseOptions,
+    UnknownWordCasing,
 };
+
+#[test]
+fn titlecase_into_matches_allocating_api_and_reuses_buffer() {
+    let options = TitleCaseOptions::default();
+    let titles = [
+        "the wind in the willows",
+        "preface: the return of sherlock holmes",
+        "a by-product of war",
+    ];
+
+    // A reused buffer is cleared each call, so it holds only the latest result
+    // and matches the allocating API exactly.
+    let mut buffer = String::from("stale contents");
+    for title in titles {
+        titlecase_into(&mut buffer, title, &options);
+        assert_eq!(buffer, titlecase_with_options(title, &options));
+    }
+}
 
 #[test]
 fn titlecases_basic_examples() {
