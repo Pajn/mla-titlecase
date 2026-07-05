@@ -20,6 +20,18 @@ fn capitalizes_after_colon() {
 }
 
 #[test]
+fn capitalizes_last_word_before_colon() {
+    assert_eq!(
+        titlecase_mla("what dreams are made of: a study"),
+        "What Dreams Are Made Of: A Study"
+    );
+    assert_eq!(
+        titlecase_mla("the world we live in: essays on modern life"),
+        "The World We Live In: Essays on Modern Life"
+    );
+}
+
+#[test]
 fn handles_hyphenated_compounds() {
     assert_eq!(titlecase_mla("state-of-the-art design"), "State-of-the-Art Design");
 
@@ -30,6 +42,13 @@ fn handles_hyphenated_compounds() {
     assert_eq!(
         titlecase_with_options("state-of-the-art design", &options),
         "State-Of-The-Art Design"
+    );
+
+    // An em dash separates clauses; it is not a compound hyphen even under
+    // CapitalizeBoth.
+    assert_eq!(
+        titlecase_with_options("well-known\u{2014}a memoir of sorts", &options),
+        "Well-Known\u{2014}a Memoir of Sorts"
     );
 }
 
@@ -48,7 +67,7 @@ fn supports_additive_external_lexicons() {
     lexicons.add_canonical_map([("postgres", "Postgres")]);
     lexicons.add_multiword_map([("new york city", "New York City")]);
     lexicons.add_protected_spellings([("copilot", "Copilot")]);
-    lexicons.add_word_set(["amid"]);
+    lexicons.add_word_set(["amidst"]);
 
     let options = TitleCaseOptions {
         external_lexicons: Some(&lexicons),
@@ -57,10 +76,28 @@ fn supports_additive_external_lexicons() {
     };
 
     assert_eq!(
-        titlecase_with_options("copilot amid postgres updates", &options),
-        "Copilot amid Postgres Updates"
+        titlecase_with_options("copilot amidst postgres updates", &options),
+        "Copilot amidst Postgres Updates"
     );
     assert_eq!(titlecase_with_options("new york city stories", &options), "New York City Stories");
+}
+
+#[test]
+fn protected_spellings_survive_small_word_lowering() {
+    // "via" is a built-in small word, but the protected spelling wins.
+    let options = TitleCaseOptions::with_protected_words(&["VIA"]);
+    assert_eq!(titlecase_with_options("traveling via rail", &options), "Traveling VIA Rail");
+
+    // An AlwaysLowercase word-set entry does not override a protected spelling.
+    let mut lexicons = ExternalLexicons::default();
+    lexicons.add_protected_spellings([("github", "GitHub")]);
+    lexicons.add_word_set(["github"]);
+    let options = TitleCaseOptions {
+        external_lexicons: Some(&lexicons),
+        small_word_policy: SmallWordPolicy::AlwaysLowercase,
+        ..TitleCaseOptions::default()
+    };
+    assert_eq!(titlecase_with_options("learning github daily", &options), "Learning GitHub Daily");
 }
 
 #[test]
@@ -73,6 +110,12 @@ fn supports_name_particle_heuristics() {
     assert_eq!(
         titlecase_with_options("ludwig van beethoven in concert", &options),
         "Ludwig van Beethoven in Concert"
+    );
+
+    // A particle next to a small word is not inside a personal-name run.
+    assert_eq!(
+        titlecase_with_options("riding the van to victory", &options),
+        "Riding the Van to Victory"
     );
 }
 
@@ -96,4 +139,75 @@ fn keeps_default_english_behavior_stable() {
 #[test]
 fn preserves_acronyms_and_dotted_abbreviations() {
     assert_eq!(titlecase_mla("nasa and the u.s.a. mission"), "NASA and the U.S.A. Mission");
+    assert_eq!(titlecase_mla("meet me at 9 a.m. sharp"), "Meet Me at 9 a.m. Sharp");
+}
+
+#[test]
+fn capitalizes_subordinating_conjunctions() {
+    assert_eq!(titlecase_mla("what if that happens"), "What If That Happens");
+    assert_eq!(titlecase_mla("stronger than pride"), "Stronger Than Pride");
+    assert_eq!(titlecase_mla("love me once again"), "Love Me Once Again");
+}
+
+#[test]
+fn lowercases_prepositions_of_any_length() {
+    assert_eq!(titlecase_mla("dancing among the stars"), "Dancing among the Stars");
+    assert_eq!(titlecase_mla("the war between us"), "The War between Us");
+    assert_eq!(titlecase_mla("a river runs through it"), "A River Runs through It");
+    assert_eq!(titlecase_mla("life without borders"), "Life without Borders");
+}
+
+#[test]
+fn capitalizes_adverbial_particles() {
+    // A particle before punctuation or a conjunction cannot be a preposition.
+    assert_eq!(titlecase_mla("come up and see me"), "Come Up and See Me");
+    assert_eq!(titlecase_mla("wake up, little susie"), "Wake Up, Little Susie");
+    // A particle after a phrasal-verb head is an adverb even with an object.
+    assert_eq!(titlecase_mla("turn off the lights"), "Turn Off the Lights");
+    assert_eq!(titlecase_mla("burning down the house"), "Burning Down the House");
+    assert_eq!(titlecase_mla("runnin' down a dream"), "Runnin' Down a Dream");
+    // An object pronoun may separate the verb from its particle.
+    assert_eq!(titlecase_mla("wake me up before you go-go"), "Wake Me Up before You Go-Go");
+}
+
+#[test]
+fn keeps_prepositional_uses_lowercase() {
+    assert_eq!(titlecase_mla("walking down the street"), "Walking down the Street");
+    assert_eq!(titlecase_mla("livin' on a prayer"), "Livin' on a Prayer");
+    assert_eq!(titlecase_mla("the wind in the willows"), "The Wind in the Willows");
+
+    let options =
+        TitleCaseOptions { capitalize_phrasal_particles: false, ..TitleCaseOptions::default() };
+    assert_eq!(titlecase_with_options("turn off the lights", &options), "Turn off the Lights");
+}
+
+#[test]
+fn keeps_contraction_endings_lowercase() {
+    assert_eq!(titlecase_mla("don't look up"), "Don't Look Up");
+    assert_eq!(titlecase_mla("it's a wonderful life"), "It's a Wonderful Life");
+    assert_eq!(titlecase_mla("the man who wasn't there"), "The Man Who Wasn't There");
+    assert_eq!(titlecase_mla("o'neill's journey"), "O'Neill's Journey");
+}
+
+#[test]
+fn keeps_ordinal_suffixes_lowercase() {
+    assert_eq!(titlecase_mla("miracle on 34th street"), "Miracle on 34th Street");
+    assert_eq!(titlecase_mla("42nd street"), "42nd Street");
+}
+
+#[test]
+fn recases_all_caps_input() {
+    assert_eq!(titlecase_mla("THE WIND IN THE WILLOWS"), "The Wind in the Willows");
+    assert_eq!(titlecase_mla("MLA HANDBOOK"), "MLA Handbook");
+    // A lone all-caps word is still treated as an acronym.
+    assert_eq!(titlecase_mla("NASA"), "NASA");
+    assert_eq!(titlecase_mla("the NASA years"), "The NASA Years");
+}
+
+#[test]
+fn capitalizes_after_colon_through_curly_quotes() {
+    assert_eq!(
+        titlecase_mla("title: \u{201C}the sequel\u{201D}"),
+        "Title: \u{201C}The Sequel\u{201D}"
+    );
 }

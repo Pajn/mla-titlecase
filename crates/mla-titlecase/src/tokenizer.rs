@@ -19,9 +19,9 @@ pub(crate) fn tokenize(input: &str) -> Vec<Token<'_>> {
             index = end;
         } else {
             let kind = match ch {
-                '-' | '\u{2010}' | '\u{2011}' | '\u{2012}' | '\u{2013}' | '\u{2014}' => {
-                    TokenKind::Hyphen
-                }
+                // Only true hyphens join compounds; figure/en/em dashes
+                // (U+2012..U+2014) separate clauses and stay punctuation.
+                '-' | '\u{2010}' | '\u{2011}' => TokenKind::Hyphen,
                 '/' => TokenKind::Slash,
                 ':' => TokenKind::Colon,
                 _ => TokenKind::Punctuation,
@@ -114,6 +114,14 @@ mod tests {
         let tokens = tokenize("state-of-the-art");
         let texts: Vec<_> = tokens.iter().map(|token| token.text).collect();
         assert_eq!(texts, vec!["state", "-", "of", "-", "the", "-", "art"]);
+    }
+
+    #[test]
+    fn distinguishes_hyphens_from_dashes() {
+        let tokens = tokenize("well-known\u{2014}a memoir");
+        let kinds: Vec<_> = tokens.iter().map(|token| (token.kind, token.text)).collect();
+        assert_eq!(kinds[1], (TokenKind::Hyphen, "-"));
+        assert_eq!(kinds[3], (TokenKind::Punctuation, "\u{2014}"));
     }
 
     #[test]

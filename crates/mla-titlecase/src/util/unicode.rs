@@ -42,23 +42,47 @@ pub fn capitalize_with_locale(value: &str, locale: LocaleProfile) -> String {
     let mut result = String::with_capacity(lowered.len());
     let mut make_upper = true;
 
-    for ch in lowered.chars() {
-        if ch.is_alphabetic() {
-            if make_upper {
-                append_uppercase(&mut result, ch, locale);
-                make_upper = false;
-            } else {
-                result.push(ch);
-            }
-        } else {
-            result.push(ch);
-            if matches!(ch, '\'' | '\u{2019}') {
-                make_upper = true;
-            }
+    for (index, ch) in lowered.char_indices() {
+        if make_upper && ch.is_alphabetic() {
+            append_uppercase(&mut result, ch, locale);
+            make_upper = false;
+            continue;
+        }
+
+        result.push(ch);
+        if ch.is_alphanumeric() {
+            // A leading digit occupies the capitalized position: `42nd`, not `42Nd`.
+            make_upper = false;
+        } else if matches!(ch, '\'' | '\u{2019}')
+            && capitalizes_after_apostrophe(&lowered, index, ch)
+        {
+            make_upper = true;
         }
     }
 
     result
+}
+
+/// Contraction endings that keep the letter after an apostrophe lowercase.
+const CONTRACTION_SUFFIXES: &[&str] =
+    &["all", "cause", "d", "em", "er", "ll", "m", "n", "re", "s", "t", "til", "ve"];
+
+/// An apostrophe recapitalizes only after a single-letter prefix (`O'Neill`,
+/// `D'Angelo`), and never before a contraction ending (`don't`, `y'all`).
+fn capitalizes_after_apostrophe(lowered: &str, index: usize, apostrophe: char) -> bool {
+    let mut preceding = lowered[..index].chars().rev();
+    if !preceding.next().is_some_and(char::is_alphabetic) {
+        return false;
+    }
+    if preceding.next().is_some_and(char::is_alphabetic) {
+        return false;
+    }
+
+    let following: String = lowered[index + apostrophe.len_utf8()..]
+        .chars()
+        .take_while(|ch| ch.is_alphanumeric())
+        .collect();
+    !CONTRACTION_SUFFIXES.contains(&following.as_str())
 }
 
 fn append_uppercase(output: &mut String, ch: char, locale: LocaleProfile) {
@@ -83,6 +107,28 @@ mod tests {
     fn detects_cased_letters() {
         assert!(has_cased_letter("Rust"));
         assert!(!has_cased_letter("123"));
+    }
+
+    #[test]
+    fn capitalizes_after_single_letter_apostrophe_prefixes() {
+        assert_eq!(capitalize_with_locale("o'neill", LocaleProfile::English), "O'Neill");
+        assert_eq!(capitalize_with_locale("d'angelo", LocaleProfile::English), "D'Angelo");
+        assert_eq!(capitalize_with_locale("rock'n'roll", LocaleProfile::English), "Rock'n'Roll");
+    }
+
+    #[test]
+    fn keeps_contraction_endings_lowercase() {
+        assert_eq!(capitalize_with_locale("don't", LocaleProfile::English), "Don't");
+        assert_eq!(capitalize_with_locale("it's", LocaleProfile::English), "It's");
+        assert_eq!(capitalize_with_locale("wasn't", LocaleProfile::English), "Wasn't");
+        assert_eq!(capitalize_with_locale("y'all", LocaleProfile::English), "Y'all");
+        assert_eq!(capitalize_with_locale("o'er", LocaleProfile::English), "O'er");
+    }
+
+    #[test]
+    fn leaves_digit_led_words_lowercase() {
+        assert_eq!(capitalize_with_locale("42nd", LocaleProfile::English), "42nd");
+        assert_eq!(capitalize_with_locale("3rd", LocaleProfile::English), "3rd");
     }
 
     #[test]

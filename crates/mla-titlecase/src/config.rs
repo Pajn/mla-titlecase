@@ -56,10 +56,14 @@ pub enum LocaleProfile {
 pub struct TitleCaseOptions<'a> {
     /// Preserve mixed-case input such as `iPhone` when the word is not forced lowercase.
     pub preserve_existing_caps: bool,
-    /// Capitalize the first significant word after a colon.
+    /// Treat colons as subtitle boundaries: capitalize the first significant
+    /// word after a colon and the last one before it.
     pub capitalize_after_colon: bool,
     /// Lowercase MLA small words when they appear internally.
     pub lowercase_small_words: bool,
+    /// Capitalize small words acting as adverbial particles rather than
+    /// prepositions (`Give Up`, `Turn Off the Lights`).
+    pub capitalize_phrasal_particles: bool,
     /// Selects the small-word policy to apply.
     pub small_word_policy: SmallWordPolicy,
     /// Selects how hyphenated compounds are handled.
@@ -80,6 +84,7 @@ impl<'a> Default for TitleCaseOptions<'a> {
             preserve_existing_caps: true,
             capitalize_after_colon: true,
             lowercase_small_words: true,
+            capitalize_phrasal_particles: true,
             small_word_policy: SmallWordPolicy::Mla,
             hyphen_style: HyphenStyle::MlaLike,
             protected_words: &[],
