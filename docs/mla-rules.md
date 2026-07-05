@@ -4,7 +4,9 @@ The library implements a pragmatic MLA-focused title-casing engine.
 
 ## Small words
 
-The built-in small-word list includes common articles, conjunctions, and prepositions such as `a`, `an`, `and`, `as`, `at`, `by`, `for`, `in`, `of`, `on`, `the`, `to`, and `with`.
+The built-in small-word list follows MLA's part-of-speech rule: it lowercases articles (`a`, `an`, `the`), coordinating conjunctions (`and`, `but`, `for`, `nor`, `or`, `so`, `yet`), and prepositions of any length (`of`, `with`, `among`, `between`, `throughout`, ...).
+
+Subordinating conjunctions such as `if`, `that`, `than`, `once`, and `because` are capitalized, as MLA requires. Words that can be either a preposition or a subordinating conjunction (`after`, `before`, `since`, `till`, `until`) are treated as prepositions and lowercased, the more common reading in titles. Similarly, `up`, `down`, `off`, `over`, and `past` are treated as prepositions even though MLA capitalizes them when they act as adverbs (as in phrasal verbs); a static list cannot disambiguate part of speech.
 
 By default these words are lowercased only when they appear internally.
 
