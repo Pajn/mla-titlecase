@@ -48,7 +48,7 @@ fn supports_additive_external_lexicons() {
     lexicons.add_canonical_map([("postgres", "Postgres")]);
     lexicons.add_multiword_map([("new york city", "New York City")]);
     lexicons.add_protected_spellings([("copilot", "Copilot")]);
-    lexicons.add_word_set(["amid"]);
+    lexicons.add_word_set(["amidst"]);
 
     let options = TitleCaseOptions {
         external_lexicons: Some(&lexicons),
@@ -57,8 +57,8 @@ fn supports_additive_external_lexicons() {
     };
 
     assert_eq!(
-        titlecase_with_options("copilot amid postgres updates", &options),
-        "Copilot amid Postgres Updates"
+        titlecase_with_options("copilot amidst postgres updates", &options),
+        "Copilot amidst Postgres Updates"
     );
     assert_eq!(titlecase_with_options("new york city stories", &options), "New York City Stories");
 }
@@ -96,6 +96,21 @@ fn keeps_default_english_behavior_stable() {
 #[test]
 fn preserves_acronyms_and_dotted_abbreviations() {
     assert_eq!(titlecase_mla("nasa and the u.s.a. mission"), "NASA and the U.S.A. Mission");
+}
+
+#[test]
+fn capitalizes_subordinating_conjunctions() {
+    assert_eq!(titlecase_mla("what if that happens"), "What If That Happens");
+    assert_eq!(titlecase_mla("stronger than pride"), "Stronger Than Pride");
+    assert_eq!(titlecase_mla("love me once again"), "Love Me Once Again");
+}
+
+#[test]
+fn lowercases_prepositions_of_any_length() {
+    assert_eq!(titlecase_mla("dancing among the stars"), "Dancing among the Stars");
+    assert_eq!(titlecase_mla("the war between us"), "The War between Us");
+    assert_eq!(titlecase_mla("a river runs through it"), "A River Runs through It");
+    assert_eq!(titlecase_mla("life without borders"), "Life without Borders");
 }
 
 #[test]
