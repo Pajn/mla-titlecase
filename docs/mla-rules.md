@@ -37,7 +37,8 @@ Only true hyphens (`-`, U+2010, U+2011) join compounds. Figure, en, and em dashe
 
 ## Acronyms and dotted abbreviations
 
-- all-caps acronyms such as `NASA` are preserved
+- all-caps acronyms such as `NASA` are preserved when the rest of the title contains lowercase letters, or when the acronym is the only word
+- fully all-caps multi-word input is treated as shouting and recased to title case; known abbreviations (`MLA`, `NASA`, `USA`, ...) are restored from the built-in abbreviation list, and protected spellings are kept
 - dotted initialisms such as `u.s.a.` normalize to `U.S.A.`
 - lowercase dotted abbreviations like `e.g.`, `i.e.`, `a.m.`, and `p.m.` remain lowercase
 

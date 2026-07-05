@@ -81,7 +81,10 @@ pub(crate) fn likely_adverbial_particle(tokens: &[Token<'_>], index: usize, key:
     };
 
     if following.is_word() {
-        if matches!(lookup_key(following.text).as_str(), "and" | "but" | "nor" | "or") {
+        // Coordinators cannot begin a preposition's complement. "so" and
+        // "yet" are deliberately absent: they can open a noun phrase ("in so
+        // many ways", "in yet another life").
+        if matches!(lookup_key(following.text).as_str(), "and" | "but" | "for" | "nor" | "or") {
             return true;
         }
     } else if following.kind == TokenKind::Slash {
@@ -186,6 +189,9 @@ mod tests {
         // No complement can follow.
         assert!(particle_at("come up and see me", "up"));
         assert!(particle_at("give up, move on", "up"));
+        assert!(particle_at("we're in for stormy weather", "in"));
+        // "so" can open a noun phrase, so it is not a no-complement signal.
+        assert!(!particle_at("lost in so many ways", "in"));
         // Phrasal-verb head precedes, object follows.
         assert!(particle_at("turn off the lights", "off"));
         // An object pronoun may sit between verb and particle.
