@@ -32,6 +32,13 @@ sha2 = "0.10"
 tempfile = "3.17"
 thiserror = "2.0"
 
+# `cargo release <level>` bumps both crates in lockstep, commits, tags `vX.Y.Z`,
+# and pushes. Publishing is left to CI (release.yml), which triggers on the tag.
+[workspace.metadata.release]
+shared-version = true
+tag-name = "v{{version}}"
+publish = false
+
 [workspace.lints.rust]
 missing_docs = "warn"
 unsafe_code = "deny"

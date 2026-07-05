@@ -1,20 +1,12 @@
 name: release
 
+# Triggered by the `vX.Y.Z` tags that `cargo release` pushes. Publishes both
+# crates to crates.io and uploads prebuilt binaries to the GitHub release so the
+# CLI can be installed with `cargo binstall mla-titlecase-cli`.
 on:
-  workflow_dispatch:
-    inputs:
-      release_tag:
-        description: Tag name to publish, for example v0.1.0
-        required: false
-        type: string
-      publish_crates:
-        description: Publish both crates to crates.io after uploading release assets
-        required: false
-        default: false
-        type: boolean
   push:
     tags:
-      - "v*"
+      - "v[0-9]+.[0-9]+.[0-9]+*"
 
 permissions:
   contents: read
@@ -24,180 +16,65 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  validate:
-    uses: ./.github/workflows/reusable-rust-validate.yml
-
-  build-cli-binaries:
-    name: build ${{ matrix.target }}
-    needs: validate
-    runs-on: ${{ matrix.os }}
-    permissions:
-      contents: read
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            archive_ext: tgz
-          - os: macos-15-intel
-            target: x86_64-apple-darwin
-            archive_ext: tgz
-          - os: macos-14
-            target: aarch64-apple-darwin
-            archive_ext: tgz
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            archive_ext: zip
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install pinned Rust toolchain
-        run: |
-          rustup toolchain install
-          rustup target add ${{ matrix.target }}
-
-      - uses: Swatinem/rust-cache@v2
-
-      - if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
-        run: sudo apt-get update && sudo apt-get install --yes musl-tools
-
-      - name: Resolve release metadata
-        shell: bash
-        run: |
-          VERSION=$(cargo pkgid -p mla-titlecase-cli | sed -E 's/.*#(.*)$/\1/')
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            RELEASE_TAG="${GITHUB_REF_NAME}"
-          else
-            RELEASE_TAG="${{ inputs.release_tag }}"
-          fi
-
-          if [[ -z "${RELEASE_TAG}" ]]; then
-            echo "release_tag is required for workflow_dispatch" >&2
-            exit 1
-          fi
-
-          if [[ "${RELEASE_TAG}" != "v${VERSION}" ]]; then
-            echo "Release tag ${RELEASE_TAG} does not match CLI crate version v${VERSION}" >&2
-            exit 1
-          fi
-
-          {
-            echo "version=${VERSION}"
-            echo "release_tag=${RELEASE_TAG}"
-            echo "archive_base=mla-titlecase-cli-${{ matrix.target }}-v${VERSION}"
-          } >> "${GITHUB_ENV}"
-
-      - name: Build release binary
-        run: cargo build --locked --release --target ${{ matrix.target }} -p mla-titlecase-cli
-
-      - name: Package release archive
-        shell: bash
-        env:
-          TARGET: ${{ matrix.target }}
-        run: |
-          ARCHIVE_DIR="${archive_base}"
-          mkdir -p "${ARCHIVE_DIR}"
-          cp README.md LICENSE "${ARCHIVE_DIR}/"
-
-          # macOS runners ship `shasum` rather than coreutils' `sha256sum`.
-          write_sha256() {
-            if command -v sha256sum >/dev/null 2>&1; then
-              sha256sum "$1" > "$1.sha256"
-            else
-              shasum -a 256 "$1" > "$1.sha256"
-            fi
-          }
-
-          if [[ "${TARGET}" == *windows* ]]; then
-            cp "target/${TARGET}/release/mla-titlecase.exe" "${ARCHIVE_DIR}/mla-titlecase.exe"
-            7z a "${archive_base}.zip" "./${ARCHIVE_DIR}/*"
-            write_sha256 "${archive_base}.zip"
-          else
-            cp "target/${TARGET}/release/mla-titlecase" "${ARCHIVE_DIR}/mla-titlecase"
-            tar -czf "${archive_base}.tgz" "${ARCHIVE_DIR}"
-            write_sha256 "${archive_base}.tgz"
-          fi
-
-      - name: Upload packaged artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.target }}
-          path: |
-            *.tgz
-            *.tgz.sha256
-            *.zip
-            *.zip.sha256
-
-  publish-release:
-    runs-on: ubuntu-latest
-    needs: build-cli-binaries
-    permissions:
-      contents: write
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GH_REPO: ${{ github.repository }}
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: release-artifacts
-
-      - name: Resolve release metadata
-        shell: bash
-        run: |
-          if [[ "${{ github.event_name }}" == "push" ]]; then
-            RELEASE_TAG="${GITHUB_REF_NAME}"
-          else
-            RELEASE_TAG="${{ inputs.release_tag }}"
-          fi
-
-          if [[ -z "${RELEASE_TAG}" ]]; then
-            echo "release_tag is required for workflow_dispatch" >&2
-            exit 1
-          fi
-
-          echo "release_tag=${RELEASE_TAG}" >> "${GITHUB_ENV}"
-
-      - name: Create or update GitHub release
-        shell: bash
-        run: |
-          if gh release view "${release_tag}" >/dev/null 2>&1; then
-            echo "Release ${release_tag} already exists"
-          else
-            gh release create "${release_tag}" --draft --generate-notes
-          fi
-
-      - name: Upload release artifacts
-        shell: bash
-        run: gh release upload "${release_tag}" release-artifacts/*/* --clobber
-
   publish-crates:
     runs-on: ubuntu-latest
-    needs: publish-release
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_crates }}
     permissions:
-      contents: read
+      # Required for crates.io Trusted Publishing (OIDC); no stored token.
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
       - name: Install pinned Rust toolchain
         run: rustup toolchain install
 
-      - name: Publish crates
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+
+      # `mla-titlecase` must land in the index before `mla-titlecase-cli`, which
+      # depends on it. `cargo publish` blocks until the crate is available, so
+      # the second publish resolves cleanly.
+      - run: cargo publish -p mla-titlecase --locked
         env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-        shell: bash
-        run: |
-          cargo publish -p mla-titlecase --locked
-          for attempt in {1..10}; do
-            if cargo publish -p mla-titlecase-cli --locked; then
-              exit 0
-            fi
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
 
-            if [[ "${attempt}" == "10" ]]; then
-              echo "Timed out waiting for mla-titlecase to become available on crates.io" >&2
-              exit 1
-            fi
+      - run: cargo publish -p mla-titlecase-cli --locked
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
 
-            sleep 30
-          done
+  upload-binaries:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: x86_64-apple-darwin
+            os: macos-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    permissions:
+      # Required to create the release and upload assets to it.
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Builds the `mla-titlecase` binary (using `cross` for the aarch64 Linux
+      # target), packages it as mla-titlecase-<target>.tar.gz (.zip on Windows)
+      # with a sha256 sidecar, and creates/uploads to the release for this tag.
+      - uses: taiki-e/upload-rust-binary-action@v1
+        with:
+          bin: mla-titlecase
+          target: ${{ matrix.target }}
+          archive: mla-titlecase-$target
+          tar: unix
+          zip: windows
+          checksum: sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
