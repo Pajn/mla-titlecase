@@ -3,7 +3,7 @@ use crate::classify::{
 };
 use crate::lexicon::{is_adverbial_particle, is_phrasal_verb_pair, is_small_word};
 use crate::token::{Token, TokenKind};
-use crate::util::normalize::lookup_key;
+use crate::util::normalize::normalized_key;
 
 pub(crate) fn first_significant_word(tokens: &[Token<'_>]) -> Option<usize> {
     tokens.iter().position(|token| is_significant_word(*token))
@@ -92,7 +92,7 @@ pub(crate) fn likely_adverbial_particle(tokens: &[Token<'_>], index: usize, key:
         // Coordinators cannot begin a preposition's complement. "so" and
         // "yet" are deliberately absent: they can open a noun phrase ("in so
         // many ways", "in yet another life").
-        if matches!(lookup_key(following.text).as_str(), "and" | "but" | "for" | "nor" | "or") {
+        if matches!(normalized_key(following.text).as_ref(), "and" | "but" | "for" | "nor" | "or") {
             return true;
         }
     } else if following.kind == TokenKind::Slash {
@@ -114,11 +114,11 @@ pub(crate) fn likely_adverbial_particle(tokens: &[Token<'_>], index: usize, key:
             continue;
         }
         if token.is_word() {
-            let word_key = lookup_key(token.text);
+            let word_key = normalized_key(token.text);
             // A phrasal verb's object pronoun may separate the verb from its
             // particle: "Wake Me Up", "Let You Down".
             if !skipped_pronoun
-                && matches!(word_key.as_str(), "me" | "you" | "him" | "her" | "it" | "us" | "them")
+                && matches!(word_key.as_ref(), "me" | "you" | "him" | "her" | "it" | "us" | "them")
             {
                 skipped_pronoun = true;
                 continue;
@@ -140,7 +140,7 @@ pub(crate) fn likely_name_particle_context(tokens: &[Token<'_>], index: usize) -
 }
 
 fn looks_like_name_word(word: Option<Token<'_>>) -> bool {
-    word.is_some_and(|token| !is_small_word(&lookup_key(token.text)))
+    word.is_some_and(|token| !is_small_word(&normalized_key(token.text)))
 }
 
 fn previous_word<'a>(tokens: &'a [Token<'a>], index: usize) -> Option<Token<'a>> {

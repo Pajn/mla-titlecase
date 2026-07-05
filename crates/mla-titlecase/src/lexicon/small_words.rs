@@ -73,7 +73,9 @@ const SMALL_WORDS: &[&str] = &[
 ];
 
 pub(crate) fn contains(word: &str) -> bool {
-    SMALL_WORDS.contains(&word)
+    // SMALL_WORDS is kept sorted (asserted by `list_is_sorted`), so a binary
+    // search beats a linear scan on this hot path.
+    SMALL_WORDS.binary_search(&word).is_ok()
 }
 
 #[cfg(test)]
@@ -106,5 +108,13 @@ mod tests {
         assert!(!contains("than"));
         assert!(!contains("once"));
         assert!(!contains("because"));
+    }
+
+    #[test]
+    fn list_is_sorted() {
+        assert!(
+            super::SMALL_WORDS.windows(2).all(|pair| pair[0] < pair[1]),
+            "SMALL_WORDS must stay sorted for binary_search"
+        );
     }
 }

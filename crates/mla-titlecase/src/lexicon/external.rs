@@ -7,7 +7,7 @@ use crate::{
     fst_store::{mmap_fst_plugin, open_fst_runtime_plugin, FstRuntimePlugin},
     plugin::{LexiconPlugin, PluginPayload},
     token::{Token, TokenKind},
-    util::normalize::lookup_key,
+    util::normalize::{lookup_key, normalized_key},
     Result,
 };
 
@@ -160,9 +160,9 @@ impl ExternalLexicons {
     }
 
     pub(crate) fn contains_word(&self, word: &str) -> bool {
-        let key = lookup_key(word);
+        let key = normalized_key(word);
         self.word_sets.iter().rev().any(|backend| match backend {
-            WordSetBackend::Heap(set) => set.contains(&key),
+            WordSetBackend::Heap(set) => set.contains(key.as_ref()),
             WordSetBackend::Fst(plugin) => plugin.contains_word(&key),
         })
     }
@@ -178,9 +178,9 @@ impl ExternalLexicons {
     }
 
     pub(crate) fn canonical_spelling(&self, word: &str) -> Option<&str> {
-        let key = lookup_key(word);
+        let key = normalized_key(word);
         self.canonical_maps.iter().rev().find_map(|backend| match backend {
-            MapBackend::Heap(map) => map.get(&key).map(String::as_str),
+            MapBackend::Heap(map) => map.get(key.as_ref()).map(String::as_str),
             MapBackend::Fst(plugin) => plugin.map_value(&key),
         })
     }
@@ -207,7 +207,7 @@ impl ExternalLexicons {
             if !phrase.is_empty() {
                 phrase.push(' ');
             }
-            phrase.push_str(&lookup_key(token.text));
+            phrase.push_str(normalized_key(token.text).as_ref());
             words += 1;
 
             if let Some(value) =
@@ -234,9 +234,9 @@ impl ExternalLexicons {
     }
 
     pub(crate) fn protected_spelling(&self, word: &str) -> Option<&str> {
-        let key = lookup_key(word);
+        let key = normalized_key(word);
         self.protected_maps.iter().rev().find_map(|backend| match backend {
-            MapBackend::Heap(map) => map.get(&key).map(String::as_str),
+            MapBackend::Heap(map) => map.get(key.as_ref()).map(String::as_str),
             MapBackend::Fst(plugin) => plugin.map_value(&key),
         })
     }
@@ -244,9 +244,9 @@ impl ExternalLexicons {
     /// Returns the rank for a previously added ranked-word entry.
     #[must_use]
     pub fn rank_of(&self, word: &str) -> Option<u64> {
-        let key = lookup_key(word);
+        let key = normalized_key(word);
         self.ranked_words.iter().rev().find_map(|backend| match backend {
-            RankedBackend::Heap(map) => map.get(&key).copied(),
+            RankedBackend::Heap(map) => map.get(key.as_ref()).copied(),
             RankedBackend::Fst(plugin) => plugin.rank_of(&key),
         })
     }
