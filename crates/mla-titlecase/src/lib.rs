@@ -1,17 +1,4 @@
-//! MLA-style title casing for Rust.
-//!
-//! The library keeps a built-in MLA rule engine as the authoritative source of
-//! small-word behavior. Optional external lexicons can add canonical spellings,
-//! protected words, and word-set heuristics without changing the default MLA
-//! semantics.
-//!
-//! # Examples
-//!
-//! ```
-//! use mla_titlecase::titlecase_mla;
-//!
-//! assert_eq!(titlecase_mla("the wind in the willows"), "The Wind in the Willows");
-//! ```
+#![doc = include_str!("../README.md")]
 
 pub mod analysis;
 pub mod config;
