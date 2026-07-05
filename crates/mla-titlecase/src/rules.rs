@@ -46,12 +46,10 @@ pub(crate) fn apply(tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> Str
             hyphenated && matches!(options.hyphen_style, HyphenStyle::CapitalizeBoth);
         let should_capitalize = is_first || is_last || at_colon_boundary || capitalize_hyphen;
 
+        // Protected spellings always win, including over small-word lowering:
+        // a spelling the caller asked to protect is never recased.
         if let Some(protected) = protected_spelling(token.text, &key, options) {
-            if should_force_lowercase(&key, should_capitalize, tokens, index, options) {
-                output.push_str(&lowercase_word(protected, options.locale));
-            } else {
-                output.push_str(protected);
-            }
+            output.push_str(protected);
             index += 1;
             continue;
         }
