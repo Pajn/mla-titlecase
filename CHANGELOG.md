@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Added
+
+- Adverbial-particle detection (`capitalize_phrasal_particles`, on by default): small words are capitalized when no prepositional complement can follow ("Come Up and See Me") or when they follow a curated phrasal-verb head ("Turn Off the Lights", "Burning Down the House"), matching MLA's rule that adverbs are capitalized.
+
 ### Changed
 
 - The small-word list now follows MLA's part-of-speech rule: subordinating conjunctions (`if`, `that`, `than`, `once`) are capitalized, and prepositions of any length (`about`, `among`, `between`, `despite`, `throughout`, `without`, ...) are lowercased.

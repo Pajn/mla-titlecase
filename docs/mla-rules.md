@@ -6,9 +6,18 @@ The library implements a pragmatic MLA-focused title-casing engine.
 
 The built-in small-word list follows MLA's part-of-speech rule: it lowercases articles (`a`, `an`, `the`), coordinating conjunctions (`and`, `but`, `for`, `nor`, `or`, `so`, `yet`), and prepositions of any length (`of`, `with`, `among`, `between`, `throughout`, ...).
 
-Subordinating conjunctions such as `if`, `that`, `than`, `once`, and `because` are capitalized, as MLA requires. Words that can be either a preposition or a subordinating conjunction (`after`, `before`, `since`, `till`, `until`) are treated as prepositions and lowercased, the more common reading in titles. Similarly, `up`, `down`, `off`, `over`, and `past` are treated as prepositions even though MLA capitalizes them when they act as adverbs (as in phrasal verbs); a static list cannot disambiguate part of speech.
+Subordinating conjunctions such as `if`, `that`, `than`, `once`, and `because` are capitalized, as MLA requires. Words that can be either a preposition or a subordinating conjunction (`after`, `before`, `since`, `till`, `until`) are treated as prepositions and lowercased, the more common reading in titles.
 
 By default these words are lowercased only when they appear internally.
+
+## Adverbial particles
+
+MLA capitalizes adverbs, including the particle of a phrasal verb. When `capitalize_phrasal_particles` is enabled (the default), a small word escapes lowering in two situations:
+
+- nothing that could serve as a preposition's complement follows it — the next token is punctuation, a dash, or a coordinating conjunction ("Give Up, Move On", "Come Up and See Me")
+- it follows a curated phrasal-verb head, directly or across one object pronoun ("Turn Off the Lights", "Burning Down the House", "Wake Me Up")
+
+Prepositional uses stay lowercase ("Walking down the Street", "Livin' on a Prayer"). Genuinely ambiguous phrases that the heuristic misreads can be pinned with protected words.
 
 ## First and last significant words
 
