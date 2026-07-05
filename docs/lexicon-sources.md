@@ -1,198 +1,119 @@
 # Lexicon sources
 
-External sources are optional CLI inputs. They do not replace the built-in MLA rule engine.
+The library works with no downloaded data. These sources are *optional* inputs
+for the CLI: you fetch one, prepare it, and build a plugin the library can load.
+None of them replace the built-in MLA rule engine — they only add canonical
+spellings, protected forms, or word-set membership.
 
-The repository does **not** commit fetched raw data or prepared outputs. End users are expected to review the upstream licenses and notices first, then run the CLI locally to fetch and prepare the sources they are allowed to use.
+The fetch → prepare → build-plugin pipeline itself is documented once, in the
+[CLI README](../crates/mla-titlecase-cli/README.md). This page is the catalog:
+what each source is and when to reach for it.
 
-## Supported default sources
+> The repository does **not** commit fetched or prepared data. Review each
+> upstream's license yourself, then run the CLI locally to produce artifacts you
+> are allowed to use.
 
-| Source | Default upstream artifact | Output kind | License / notice handling |
+## At a glance
+
+| Source | Upstream | Output kind | License |
 | --- | --- | --- | --- |
-| `gnd` | live query to `lobid.org/gnd/search` | `CanonicalMap`, `MultiwordMap`, or `ProtectedSpellings` | GND authority data served by lobid is CC0; the exact request URL is preserved in the fetch manifest |
-| `musicbrainz` | live query to `musicbrainz.org/ws/2/artist/` | `CanonicalMap`, `MultiwordMap`, or `ProtectedSpellings` | MusicBrainz core database data is CC0; the exact request URL is preserved in the fetch manifest |
-| `orcid` | live aggregation of `pub.orcid.org` search plus person records | `CanonicalMap`, `MultiwordMap`, or `ProtectedSpellings` | ORCID public data is CC0; manifests also preserve a note about separate ORCID trademark/community guidance |
-| `scowl` | `en-wl/wordlist:data/scowl-pre.txt` on `v2` | `WordSet` | Preserve the upstream `Copyright` notice |
-| `stopwords-iso` | `stopwords-iso/stopwords-en:stopwords-en.json` on `master` | `WordSet` | MIT license text is preserved in fetch metadata |
-| `wikidata` | live query to `query.wikidata.org/sparql` | `CanonicalMap`, `MultiwordMap`, or `ProtectedSpellings` | Structured data is CC0; the exact query URL is preserved in the fetch manifest |
-| `wordfreq` | `rspeer/wordfreq:wordfreq/data/small_en.msgpack.gz` on `master` | `RankedWords` | Requires `--acknowledge-cc-by-sa` and preserves `NOTICE.md` |
+| `scowl` | `en-wl/wordlist:data/scowl-pre.txt` (v2) | `WordSet` | Preserve the upstream `Copyright` notice |
+| `stopwords-iso` | `stopwords-iso/stopwords-en:stopwords-en.json` | `WordSet` | MIT |
+| `wordfreq` | `rspeer/wordfreq:.../small_en.msgpack.gz` | `RankedWords` | CC-BY-SA (requires `--acknowledge-cc-by-sa`) |
+| `wikidata` | live SPARQL at `query.wikidata.org` | `CanonicalMap` / `MultiwordMap` / `ProtectedSpellings` | CC0 |
+| `gnd` | live query at `lobid.org/gnd/search` | `CanonicalMap` / `MultiwordMap` / `ProtectedSpellings` | CC0 |
+| `musicbrainz` | live query at `musicbrainz.org/ws/2/artist/` | `CanonicalMap` / `MultiwordMap` / `ProtectedSpellings` | CC0 |
+| `orcid` | live aggregation of `pub.orcid.org` | `CanonicalMap` / `MultiwordMap` / `ProtectedSpellings` | CC0 (data); trademark guidance separate |
 
-`lexicon fetch` resolves each default artifact through the GitHub Contents API first. That gives the CLI a commit-pinned raw download URL plus the blob SHA, which is recorded as `source_version` in the fetch manifest and then carried into prepared/plugin metadata.
+GitHub-artifact sources (`scowl`, `stopwords-iso`, `wordfreq`) are resolved
+through the GitHub Contents API to a commit-pinned URL and blob SHA, recorded as
+`source_version` in the fetch manifest. Live sources instead record the exact
+request URL.
 
-## Fetch and prepare flow
+The `--payload-kind` flag on `prepare` chooses the shape for the authority-style
+sources: `canonical-map` for single-token canonical spellings, `multiword-map`
+for multiword names and aliases, `protected-spellings` for stylized single-token
+forms.
 
-The intended out-of-box flow is:
+## General-English membership
 
-```bash
-cargo run -p mla-titlecase-cli -- lexicon fetch scowl --output /tmp/scowl.txt
-cargo run -p mla-titlecase-cli -- lexicon prepare scowl --input /tmp/scowl.txt --output /tmp/scowl.json
-cargo run -p mla-titlecase-cli -- lexicon build-plugin /tmp/scowl.json --format fst --output /tmp/scowl.mlatl
-```
+### `scowl`
 
-`prepare` automatically reads the adjacent fetch manifest at `<input>.manifest.json` when it exists, so the prepared file inherits:
+- **Provides:** a `WordSet` of English headwords and inflected forms, parsed from
+  the SCOWL preformat (phrase-like entries are flattened to token level, since
+  the library's word-set hooks are token-oriented).
+- **Use it when:** you want general English word membership — for example to
+  drive `AllCapsPolicy::NormalizeKnownWords`, or `SmallWordPolicy::AlwaysLowercase`.
+- **Note:** the recommended general-English source. Additive only; it never
+  redefines MLA small-word behavior.
 
-- the commit-pinned upstream URL
-- the resolved source version / blob SHA
-- the preserved license summary
-- the preserved notice text
+### `stopwords-iso`
 
-The prepared JSON also includes a normalization report with input counts, deduplicated output counts, duplicates removed, and ignored records.
+- **Provides:** a `WordSet` from a plain JSON stop-word list — the simplest source.
+- **Use it when:** experimenting, running diagnostics, or building heuristic
+  small-word candidate lists.
+- **Avoid it for:** authoritative MLA semantics. The built-in list stays the
+  source of truth unless a caller explicitly opts into broader lowering.
 
-## Source-specific notes
+### `wordfreq`
 
-## `scowl`
+- **Provides:** `RankedWords` from the English `small_en.msgpack.gz` MessagePack
+  dataset (the CLI decompresses the gzip, decodes the MessagePack, and expands
+  frequency buckets into deterministic rank-ordered entries).
+- **Use it when:** you want word-frequency rank rather than plain membership.
+- **License:** includes CC-BY-SA-derived data; `fetch` and `prepare` both
+  require `--acknowledge-cc-by-sa` and preserve the upstream `NOTICE.md`.
 
-SCOWL is the recommended general-English source for word membership. The CLI currently consumes the upstream `scowl-pre.txt` artifact from the SCOWL v2 repository and normalizes it into a single `WordSet`.
+## Personal and entity names
 
-Important details:
+### `wikidata`
 
-- the upstream file is richer than a plain word list
-- the parser extracts headwords and inflected forms from the SCOWL preformat
-- phrase-like entries are flattened to token-level words because the library's external word-set hooks are token-oriented
+- **Provides:** people, organizations, and creative works via a live SPARQL query.
+- **Use it when:** you want broad, general-purpose authority coverage across many
+  entity types.
+- **Avoid it for:** a small, fully curated set — broad filters return noisy
+  results, and large queries cost more time and memory than the GitHub sources.
+- **Flags:** `--language <tag>`, `--limit <n>`, `--query <sparql>` to override
+  the built-in query.
 
-This makes SCOWL a strong additive membership source, but it still does not redefine MLA small-word behavior.
+### `gnd`
 
-## `stopwords-iso`
+- **Provides:** German National Library authority names (filtered to `Person`),
+  including both heading-style and person-entity components — a single fetch can
+  yield `Beethoven, Ludwig van` and `Ludwig van Beethoven`.
+- **Use it when:** you want German and European personal names, or a narrower,
+  higher-signal complement to Wikidata.
+- **Avoid it for:** general English membership, or broad multilingual coverage
+  across organizations and works (prefer Wikidata there).
 
-`stopwords-iso` is the simplest source. The English artifact is plain JSON and normalizes directly into a `WordSet`.
+### `musicbrainz`
 
-It is useful for:
+- **Provides:** artist, band, and performer names — including stylized single-token
+  forms like `P!nk` — from the public artist web service (`name`, `sort-name`,
+  and aliases).
+- **Use it when:** the deployment is music-heavy and brand-like artist casing
+  matters.
+- **Flags:** `--query <lucene>`, `--limit <n>`.
 
-- experiments
-- diagnostics
-- heuristic small-word candidate lists
+### `orcid`
 
-It is **not** authoritative for MLA semantics. The built-in MLA list remains the source of truth unless a caller explicitly opts into broader lowering behavior.
-
-## `wordfreq`
-
-`wordfreq` provides ranked word data rather than a plain membership set. The default artifact is the English `small_en.msgpack.gz` cBpack dataset.
-
-The CLI:
-
-- decompresses the gzip payload
-- decodes the MessagePack cBpack structure
-- expands frequency buckets into deterministic rank-ordered entries
-- stores them as a `RankedWords` payload
-
-Because the upstream package includes CC-BY-SA-derived data and an explicit notice, the CLI requires `--acknowledge-cc-by-sa` for both `fetch` and `prepare`.
-
-## `wikidata`
-
-`wikidata` is the first optional authority-style source. Instead of downloading a fixed artifact from a Git repository, the CLI issues a live SPARQL query against `query.wikidata.org` and records the full resolved query URL in the fetch manifest.
-
-The default query targets a manageable slice of entity classes:
-
-- humans
-- organizations
-- creative works
-
-and supports:
-
-- `--language <tag>` to choose the label/alias language
-- `--limit <n>` to cap the live query size
-- `--query <sparql>` to override the built-in query entirely
-
-The raw SPARQL JSON can then be prepared into one of three plugin payloads:
-
-- `CanonicalMap` for single-token names with authoritative casing
-- `MultiwordMap` for multiword entities and aliases
-- `ProtectedSpellings` for single-token protected forms
-
-Example flow:
-
-```bash
-cargo run -p mla-titlecase-cli -- \
-  lexicon fetch wikidata \
-  --output /tmp/wikidata.json \
-  --language en \
-  --limit 250
-
-cargo run -p mla-titlecase-cli -- \
-  lexicon prepare wikidata \
-  --input /tmp/wikidata.json \
-  --output /tmp/wikidata-prepared.json \
-  --payload-kind multiword-map
-```
-
-Wikidata is useful when you want broad optional coverage for people, organizations, works, and aliases. It is less attractive when you need a small, deterministic, fully curated source: live query results can be noisy if your filters are too broad, and larger queries will cost more time and memory than the GitHub-backed sources.
-
-## `gnd`
-
-`gnd` uses the public lobid search API for the German National Library authority file. The default fetch is intentionally narrower than Wikidata: it queries `lobid.org/gnd/search` with `q=*`, filters to `type:Person`, and preserves the full request URL in the fetch manifest.
-
-That makes GND a good fit when you want:
-
-- German and European authority-style names
-- person-name normalization in German-heavy titles
-- a narrower, higher-signal complement to Wikidata
-
-The CLI currently extracts both heading-style names and person-entity name components when they are available, so a single fetch can preserve forms such as:
-
-- `Beethoven, Ludwig van`
-- `Ludwig van Beethoven`
-
-Like Wikidata, `prepare` supports:
-
-- `--payload-kind canonical-map`
-- `--payload-kind multiword-map`
-- `--payload-kind protected-spellings`
-
-GND is better than Wikidata when you want a more focused authority source for European personal names. It is overkill when you just need general English word membership, and it is less attractive than Wikidata when you want broad multilingual coverage across organizations, works, and places.
-
-## `musicbrainz`
-
-`musicbrainz` is deliberately narrow and deliberately explicit: the current CLI integration uses the public `musicbrainz.org/ws/2/artist/` JSON web service for artist records only. It does not claim to support every MusicBrainz dump or every non-core dataset.
-
-That makes it a strong fit for:
-
-- artist names
-- bands and performers
-- stylized single-token names such as `P!nk`
-- music-heavy deployments where brand-like casing matters
-
-The default fetch uses a small live query against the artist endpoint and accepts:
-
-- `--query <lucene-query>` to target a specific artist subset
-- `--limit <n>` to control response size
-
-During `prepare`, the CLI preserves artist `name`, `sort-name`, and alias surfaces, then lets you choose:
-
-- `--payload-kind protected-spellings` for stylized single-token names
-- `--payload-kind canonical-map` for single-token canonical surfaces
-- `--payload-kind multiword-map` for multiword artist and alias names
-
-Use MusicBrainz when the deployment is music-heavy and stylized artist names matter. Prefer Wikidata or GND when you need a broader general-purpose authority source.
-
-## `orcid`
-
-`orcid` is the narrowest of the authority-style sources in this CLI. The implementation is intentionally explicit about scope:
-
-- it queries the public ORCID search API for a small set of record identifiers
-- it fetches the corresponding public person records
-- it writes an aggregated raw JSON artifact so `prepare` can run deterministically afterward
-
-This source is useful when you care about:
-
-- researcher names
-- academic and scholarly titles
-- publication-adjacent person-name normalization
-
-The current flow supports:
-
-- `--query <orcid-search-query>` for the public search
-- `--limit <n>` for the number of person records fetched
-- `--payload-kind canonical-map`, `multiword-map`, or `protected-spellings` during `prepare`
-
-The important licensing nuance is that ORCID's public data is CC0, but ORCID's name, logo, and community guidance are not the same thing as the data license. The CLI preserves that distinction in source notices so downstream users do not mistake trademark/display guidance for a license restriction on the public data itself.
+- **Provides:** researcher names, aggregated from the public ORCID search and the
+  matching person records.
+- **Use it when:** you care about academic and publication-adjacent names.
+- **License:** ORCID's public data is CC0, but its name, logo, and community
+  guidance are *not* the data license; the CLI preserves that distinction in the
+  source notices.
+- **Flags:** `--query <orcid-search>`, `--limit <n>`.
 
 ## Licensing expectations
 
-The CLI preserves upstream licensing context in manifests and generated plugins, but it does not make license decisions for the user.
+The CLI preserves upstream licensing context in manifests and generated plugins,
+but it does not make license decisions for you. Before redistributing a generated
+artifact, check the upstream terms yourself:
 
-Before redistributing generated artifacts, check the upstream terms yourself:
+- whether attribution must travel with the artifact,
+- whether share-alike obligations apply to your output,
+- whether any notice text must remain visible downstream.
 
-- whether attribution must travel with the artifact
-- whether share-alike obligations apply to your output
-- whether any notice text must remain visible downstream
-
-That is especially important for `wordfreq`, whose packaged data includes attribution-sensitive and share-alike-sensitive upstream material.
+This matters most for `wordfreq`, whose packaged data is attribution- and
+share-alike-sensitive.
