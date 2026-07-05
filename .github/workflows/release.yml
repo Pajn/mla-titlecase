@@ -43,7 +43,26 @@ jobs:
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
 
+  # upload-rust-binary-action only uploads; the release must exist first, so
+  # create it once here before the matrix fans out.
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create GitHub release
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            echo "Release ${GITHUB_REF_NAME} already exists"
+          else
+            gh release create "${GITHUB_REF_NAME}" --verify-tag --generate-notes
+          fi
+
   upload-binaries:
+    needs: create-release
     strategy:
       fail-fast: false
       matrix:
@@ -60,7 +79,7 @@ jobs:
             os: windows-latest
     runs-on: ${{ matrix.os }}
     permissions:
-      # Required to create the release and upload assets to it.
+      # Required to upload assets to the release.
       contents: write
     steps:
       - uses: actions/checkout@v4
