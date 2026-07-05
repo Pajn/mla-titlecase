@@ -40,10 +40,14 @@ predicates.workspace = true
 [lints]
 workspace = true
 
+# Lets `cargo binstall mla-titlecase-cli` resolve the prebuilt binaries that
+# release.yml uploads to the GitHub release for each `vX.Y.Z` tag. The archive
+# names and layout here must match what upload-rust-binary-action produces.
 [package.metadata.binstall]
-pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }-v{ version }{ archive-suffix }"
-bin-dir = "{ name }-{ target }-v{ version }/{ bin }{ binary-ext }"
+pkg-url = "{ repo }/releases/download/v{ version }/mla-titlecase-{ target }.tar.gz"
+bin-dir = "mla-titlecase{ binary-ext }"
 pkg-fmt = "tgz"
 
 [package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-url = "{ repo }/releases/download/v{ version }/mla-titlecase-{ target }.zip"
 pkg-fmt = "zip"
