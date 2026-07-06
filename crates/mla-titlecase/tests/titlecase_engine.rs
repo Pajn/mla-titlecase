@@ -1,10 +1,193 @@
 //! Integration tests for the MLA title-casing engine.
 
 use mla_titlecase::{
-    titlecase_into, titlecase_mla, titlecase_with_options, AllCapsPolicy, ExternalLexicons,
-    HyphenStyle, LocaleProfile, NameParticlePolicy, SmallWordPolicy, TitleCaseOptions,
-    UnknownWordCasing,
+    titlecase_analyze, titlecase_analyze_with_options, titlecase_into, titlecase_mla,
+    titlecase_with_options, AllCapsPolicy, CasingRule, Confidence, ExternalLexicons, HyphenStyle,
+    LocaleProfile, NameParticlePolicy, SmallWordPolicy, TitleCaseOptions, UnknownWordCasing,
 };
+
+/// Representative inputs reused by the analysis tests.
+const CORPUS: &[&str] = &[
+    "the wind in the willows",
+    "love in the time of cholera",
+    "preface: the return of sherlock holmes",
+    "what dreams are made of: a study",
+    "state-of-the-art design",
+    "a by-product of war",
+    "turn off the lights",
+    "walking down the street",
+    "rock 'n' roll forever",
+    "the man who wasn't there",
+    "miracle on 34th street",
+    "nasa and the u.s.a. mission",
+    "THE WIND IN THE WILLOWS",
+    "MLA HANDBOOK",
+    "o'neill's journey",
+    "learning github and iphone",
+];
+
+fn span_for<'a>(
+    analysis: &'a mla_titlecase::TitleCaseAnalysis,
+    input: &str,
+    word: &str,
+) -> &'a mla_titlecase::CasingSpan {
+    analysis
+        .spans
+        .iter()
+        .find(|span| &input[span.source.clone()] == word)
+        .unwrap_or_else(|| panic!("no span whose source is {word:?}"))
+}
+
+#[test]
+fn analysis_output_matches_plain_titlecasing() {
+    // The shared cascade must produce identical output on both paths.
+    for input in CORPUS {
+        assert_eq!(titlecase_analyze(input).output, titlecase_mla(input), "mismatch for {input:?}");
+    }
+
+    let mut lexicons = ExternalLexicons::default();
+    lexicons.add_multiword_map([("new york city", "New York City")]);
+    lexicons.add_canonical_map([("postgres", "Postgres")]);
+    let option_sets = [
+        TitleCaseOptions {
+            name_particle_policy: NameParticlePolicy::Heuristic,
+            ..Default::default()
+        },
+        TitleCaseOptions { all_caps_policy: AllCapsPolicy::Preserve, ..Default::default() },
+        TitleCaseOptions::with_locale(LocaleProfile::Turkish),
+        TitleCaseOptions { external_lexicons: Some(&lexicons), ..Default::default() },
+    ];
+    let extra = [
+        "ludwig van beethoven",
+        "istanbul in winter",
+        "new york city stories",
+        "migrating to postgres today",
+    ];
+    for options in &option_sets {
+        for input in CORPUS.iter().chain(extra.iter()) {
+            assert_eq!(
+                titlecase_analyze_with_options(input, options).output,
+                titlecase_with_options(input, options),
+                "mismatch for {input:?} with {options:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn analyzes_empty_input() {
+    // The zero-word contract: empty output, no spans, Solid confidence.
+    let analysis = titlecase_analyze("");
+    assert_eq!(analysis.output, "");
+    assert!(analysis.spans.is_empty());
+    assert_eq!(analysis.confidence, Confidence::Solid);
+}
+
+#[test]
+fn analysis_collapses_multiword_lexicon_match_to_one_span() {
+    let mut lexicons = ExternalLexicons::default();
+    lexicons.add_multiword_map([("new york city", "New York City")]);
+    let options = TitleCaseOptions::with_external_lexicons(&lexicons);
+
+    let analysis = titlecase_analyze_with_options("new york city stories", &options);
+    assert_eq!(analysis.output, "New York City Stories");
+    // The three-word phrase collapses to a single MultiwordLexicon span.
+    let multiword: Vec<_> =
+        analysis.spans.iter().filter(|span| span.rule == CasingRule::MultiwordLexicon).collect();
+    assert_eq!(multiword.len(), 1);
+    assert_eq!(&"new york city stories"[multiword[0].source.clone()], "new york city");
+    assert_eq!(&analysis.output[multiword[0].output.clone()], "New York City");
+}
+
+#[test]
+fn analysis_preserve_policy_records_no_spans() {
+    let options = TitleCaseOptions {
+        all_caps_policy: AllCapsPolicy::Preserve,
+        ..TitleCaseOptions::default()
+    };
+    // Shouting input under Preserve is returned verbatim, so no decision is
+    // recorded.
+    let analysis = titlecase_analyze_with_options("STAY WITH ME", &options);
+    assert_eq!(analysis.output, "STAY WITH ME");
+    assert!(analysis.spans.is_empty());
+    assert_eq!(analysis.confidence, Confidence::Solid);
+}
+
+#[test]
+fn analysis_reports_rules_and_confidence() {
+    // Heuristic: adverbial particle drives the whole-title confidence.
+    let analysis = titlecase_analyze("turn off the lights");
+    assert_eq!(analysis.output, "Turn Off the Lights");
+    assert_eq!(analysis.confidence, Confidence::Heuristic);
+    let off = span_for(&analysis, "turn off the lights", "off");
+    assert_eq!(off.rule, CasingRule::AdverbialParticle);
+    assert_eq!(off.confidence, Confidence::Heuristic);
+    // The byte ranges map back to the original and cased words.
+    assert_eq!(&"Turn Off the Lights"[off.output.clone()], "Off");
+
+    // Solid: first/last words, an abbreviation, no heuristics.
+    let analysis = titlecase_analyze("the nasa years");
+    assert_eq!(analysis.output, "The NASA Years");
+    assert_eq!(analysis.confidence, Confidence::Solid);
+    assert_eq!(span_for(&analysis, "the nasa years", "the").rule, CasingRule::FirstWord);
+    assert_eq!(span_for(&analysis, "the nasa years", "nasa").rule, CasingRule::Abbreviation);
+
+    // Unverified: an ordinary word capitalized with no lexicon confirmation.
+    let analysis = titlecase_analyze("apple pie recipe");
+    assert_eq!(analysis.confidence, Confidence::Unverified);
+    assert_eq!(span_for(&analysis, "apple pie recipe", "pie").rule, CasingRule::Capitalized);
+    assert_eq!(span_for(&analysis, "apple pie recipe", "pie").confidence, Confidence::Unverified);
+}
+
+#[test]
+fn analysis_records_every_word_and_flags_dual_role_prepositions() {
+    // Every word gets a span, changed or not; "After" -> "after" is a dual-role
+    // preposition (Heuristic), the already-correct first/last words are not.
+    let analysis = titlecase_analyze("Love After Dark");
+    assert_eq!(analysis.output, "Love after Dark");
+    assert_eq!(analysis.confidence, Confidence::Heuristic);
+
+    let rules: Vec<_> = analysis.spans.iter().map(|span| span.rule).collect();
+    assert_eq!(rules, vec![CasingRule::FirstWord, CasingRule::SmallWord, CasingRule::LastWord]);
+
+    let after = span_for(&analysis, "Love After Dark", "After");
+    assert!(after.changed);
+    assert_eq!(after.confidence, Confidence::Heuristic);
+    assert!(!span_for(&analysis, "Love After Dark", "Love").changed);
+    assert!(!span_for(&analysis, "Love After Dark", "Dark").changed);
+}
+
+#[test]
+fn analysis_confidence_reflects_unchanged_heuristic_words() {
+    // "van" is already lowercase, so it does not change, but the name-particle
+    // heuristic still decided to keep it lowercase. It surfaces as a span and
+    // drives the overall confidence.
+    let options = TitleCaseOptions {
+        name_particle_policy: NameParticlePolicy::Heuristic,
+        ..Default::default()
+    };
+    let analysis = titlecase_analyze_with_options("ludwig van beethoven", &options);
+    assert_eq!(analysis.output, "Ludwig van Beethoven");
+    assert_eq!(analysis.confidence, Confidence::Heuristic);
+
+    let van = span_for(&analysis, "ludwig van beethoven", "van");
+    assert_eq!(van.rule, CasingRule::NameParticle);
+    assert_eq!(van.confidence, Confidence::Heuristic);
+    assert!(!van.changed);
+}
+
+#[test]
+fn analysis_reports_name_particle_heuristic() {
+    let options = TitleCaseOptions {
+        name_particle_policy: NameParticlePolicy::Heuristic,
+        ..Default::default()
+    };
+    let analysis = titlecase_analyze_with_options("Ludwig Van Beethoven", &options);
+    assert_eq!(analysis.output, "Ludwig van Beethoven");
+    let van = span_for(&analysis, "Ludwig Van Beethoven", "Van");
+    assert_eq!(van.rule, CasingRule::NameParticle);
+    assert_eq!(van.confidence, Confidence::Heuristic);
+}
 
 #[test]
 fn titlecase_into_matches_allocating_api_and_reuses_buffer() {

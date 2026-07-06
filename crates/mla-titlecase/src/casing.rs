@@ -43,39 +43,54 @@ pub(crate) fn has_internal_caps(word: &str) -> bool {
 #[cfg(test)]
 pub(crate) fn style_word(word: &str, capitalize: bool, options: &TitleCaseOptions<'_>) -> String {
     let mut out = String::with_capacity(word.len());
-    push_styled(&mut out, word, capitalize, options);
+    let _ = push_styled(&mut out, word, capitalize, options);
     out
 }
 
+/// Which branch [`push_styled`] took, so callers building a rich analysis can
+/// attribute the casing decision without repeating the shape checks.
+#[must_use]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum StyleOutcome {
+    AcronymPreserved,
+    DottedAbbreviation,
+    MixedCasePreserved,
+    Lowercased,
+    Capitalized,
+}
+
 /// Styles a word directly into an output buffer, avoiding the per-word temporary
-/// that `style_word` would allocate before being copied into the result.
+/// that `style_word` would allocate before being copied into the result. The
+/// returned [`StyleOutcome`] reports which rule applied (free for callers that
+/// ignore it).
 pub(crate) fn push_styled(
     out: &mut String,
     word: &str,
     capitalize: bool,
     options: &TitleCaseOptions<'_>,
-) {
+) -> StyleOutcome {
     if is_all_caps_acronym(word) {
         out.push_str(word);
-        return;
+        return StyleOutcome::AcronymPreserved;
     }
 
     if is_dotted_abbreviation(word) {
         out.push_str(&style_dotted_abbreviation(word));
-        return;
+        return StyleOutcome::DottedAbbreviation;
     }
 
     if !capitalize {
         push_lowercased(out, word, options.locale);
-        return;
+        return StyleOutcome::Lowercased;
     }
 
     if options.preserve_existing_caps && has_internal_caps(word) {
         out.push_str(word);
-        return;
+        return StyleOutcome::MixedCasePreserved;
     }
 
     push_capitalized(out, word, options.locale);
+    StyleOutcome::Capitalized
 }
 
 fn style_dotted_abbreviation(word: &str) -> String {
