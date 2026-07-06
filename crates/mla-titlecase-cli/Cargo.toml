@@ -8,7 +8,7 @@ description = "CLI for building and inspecting mla-titlecase lexicons"
 repository.workspace = true
 homepage.workspace = true
 documentation = "https://docs.rs/mla-titlecase-cli"
-readme = "../../README.md"
+readme = "README.md"
 keywords = ["mla", "titlecase", "cli", "lexicon"]
 categories = ["command-line-utilities", "text-processing"]
 

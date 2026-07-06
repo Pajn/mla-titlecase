@@ -8,7 +8,7 @@ description = "MLA title casing library"
 repository.workspace = true
 homepage.workspace = true
 documentation.workspace = true
-readme = "../../README.md"
+readme = "README.md"
 keywords = ["mla", "titlecase", "style", "text"]
 categories = ["text-processing"]
 
