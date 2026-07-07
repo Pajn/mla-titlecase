@@ -20,12 +20,16 @@ what each source is and when to reach for it.
 | `scowl` | `en-wl/wordlist:data/scowl-pre.txt` (v2) | `WordSet` | Preserve the upstream `Copyright` notice |
 | `stopwords-iso` | `stopwords-iso/stopwords-en:stopwords-en.json` | `WordSet` | MIT |
 | `wordfreq` | `rspeer/wordfreq:.../small_en.msgpack.gz` | `RankedWords` | CC-BY-SA (requires `--acknowledge-cc-by-sa`) |
+| `crossref` | live REST at `api.crossref.org/journals` | `MultiwordMap` / `CanonicalMap` / `ProtectedSpellings` | CC0-style (freely reusable) |
 | `wikidata` | live SPARQL at `query.wikidata.org` | `CanonicalMap` / `MultiwordMap` / `ProtectedSpellings` | CC0 |
 | `gnd` | live query at `lobid.org/gnd/search` | `CanonicalMap` / `MultiwordMap` / `ProtectedSpellings` | CC0 |
+| `ror` | live REST at `api.ror.org/organizations` | `MultiwordMap` / `CanonicalMap` / `ProtectedSpellings` | CC0 |
 | `musicbrainz` | live query at `musicbrainz.org/ws/2/artist/` | `CanonicalMap` / `MultiwordMap` / `ProtectedSpellings` | CC0 |
 | `orcid` | live aggregation of `pub.orcid.org` | `CanonicalMap` / `MultiwordMap` / `ProtectedSpellings` | CC0 (data); trademark guidance separate |
+| `natural-earth` | `nvkelso/natural-earth-vector` GeoJSON | `MultiwordMap` / `CanonicalMap` / `ProtectedSpellings` | public domain |
+| `cldr` | `unicode-org/cldr-json` territory names | `MultiwordMap` / `CanonicalMap` / `ProtectedSpellings` | Unicode License |
 
-GitHub-artifact sources (`scowl`, `stopwords-iso`, `wordfreq`) are resolved
+GitHub-artifact sources (`scowl`, `stopwords-iso`, `wordfreq`, `natural-earth`, `cldr`) are resolved
 through the GitHub Contents API to a commit-pinned URL and blob SHA, recorded as
 `source_version` in the fetch manifest. Live sources instead record the exact
 request URL.
@@ -64,7 +68,27 @@ forms.
 - **License:** includes CC-BY-SA-derived data; `fetch` and `prepare` both
   require `--acknowledge-cc-by-sa` and preserve the upstream `NOTICE.md`.
 
-## Personal and entity names
+## Journals, works, and publishers
+
+### `crossref`
+
+- **Provides:** journal/periodical titles and publisher names from the Crossref
+  REST API (`/journals`).
+- **Use it when:** you cite academic or works-cited material — this is the
+  MLA-specific source, covering the names a citation is built from.
+- **Flags:** `--limit <n>` (total journals to accumulate; fetched via cursor
+  paging 1000 rows per request), `--query <text>` to search.
+
+## Names and organizations
+
+### `ror`
+
+- **Provides:** research-organization and university names from the ROR registry
+  (both the v2 `names` schema and the v1 `name`/`aliases`/`labels` schema).
+  Acronyms are dropped — `mit` would rewrite the ordinary word.
+- **Use it when:** you want institution and university-press names for academic
+  titles.
+- **Flags:** `--limit <n>` (paginated), `--query <text>`.
 
 ### `wikidata`
 
@@ -104,6 +128,23 @@ forms.
   guidance are *not* the data license; the CLI preserves that distinction in the
   source notices.
 - **Flags:** `--query <orcid-search>`, `--limit <n>`.
+
+## Places
+
+### `natural-earth`
+
+- **Provides:** country and territory names from Natural Earth's public-domain
+  vector data (`NAME` / `NAME_LONG` properties).
+- **Use it when:** you want place-name casing with the cleanest possible
+  licensing (public domain, no attribution required).
+
+### `cldr`
+
+- **Provides:** Unicode CLDR English display names for territories and regions.
+  Alternate short forms (`US-alt-short`) and generic lowercase labels (`world`)
+  are skipped.
+- **Use it when:** you want standardized country/region display names as a
+  permissively licensed, offline complement to Natural Earth.
 
 ## Licensing expectations
 

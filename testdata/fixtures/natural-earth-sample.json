@@ -1,0 +1,21 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "NAME": "United States of America", "NAME_LONG": "United States of America" }
+    },
+    {
+      "type": "Feature",
+      "properties": { "NAME": "South Africa", "NAME_LONG": "South Africa" }
+    },
+    {
+      "type": "Feature",
+      "properties": { "NAME": "France", "NAME_LONG": "France" }
+    },
+    {
+      "type": "Feature",
+      "properties": { "NAME": "Czechia", "NAME_LONG": "Czech Republic" }
+    }
+  ]
+}

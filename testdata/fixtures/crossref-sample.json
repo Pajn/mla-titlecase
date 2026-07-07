@@ -1,0 +1,16 @@
+{
+  "status": "ok",
+  "message-type": "journal-list",
+  "message": {
+    "items": [
+      {
+        "title": "PMLA",
+        "publisher": "Modern Language Association"
+      },
+      {
+        "title": "Studies in the Novel",
+        "publisher": "Johns Hopkins University Press"
+      }
+    ]
+  }
+}

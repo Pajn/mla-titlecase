@@ -9,10 +9,14 @@ use crate::{
     normalize::NormalizedPayload,
 };
 
+pub(crate) mod cldr;
+pub(crate) mod crossref;
 pub(crate) mod github;
 pub(crate) mod gnd;
 pub(crate) mod musicbrainz;
+pub(crate) mod natural_earth;
 pub(crate) mod orcid;
+pub(crate) mod ror;
 pub(crate) mod scowl;
 pub(crate) mod stopwords_iso;
 pub(crate) mod wikidata;
@@ -21,9 +25,13 @@ pub(crate) mod wordfreq;
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, clap::ValueEnum, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub(crate) enum SourceId {
+    Cldr,
+    Crossref,
     Gnd,
     Musicbrainz,
+    NaturalEarth,
     Orcid,
+    Ror,
     Scowl,
     StopwordsIso,
     Wikidata,
@@ -33,9 +41,13 @@ pub(crate) enum SourceId {
 impl SourceId {
     pub(crate) const fn as_str(self) -> &'static str {
         match self {
+            Self::Cldr => "cldr",
+            Self::Crossref => "crossref",
             Self::Gnd => "gnd",
             Self::Musicbrainz => "musicbrainz",
+            Self::NaturalEarth => "natural-earth",
             Self::Orcid => "orcid",
+            Self::Ror => "ror",
             Self::Scowl => "scowl",
             Self::StopwordsIso => "stopwords-iso",
             Self::Wikidata => "wikidata",
@@ -85,11 +97,15 @@ pub(crate) struct PrepareOptions {
     pub(crate) payload_kind: Option<PreparePayloadKind>,
 }
 
-pub(crate) fn all_sources() -> [SourceDefinition; 7] {
+pub(crate) fn all_sources() -> [SourceDefinition; 11] {
     [
+        cldr::definition(),
+        crossref::definition(),
         gnd::definition(),
         musicbrainz::definition(),
+        natural_earth::definition(),
         orcid::definition(),
+        ror::definition(),
         scowl::definition(),
         stopwords_iso::definition(),
         wikidata::definition(),
@@ -99,9 +115,13 @@ pub(crate) fn all_sources() -> [SourceDefinition; 7] {
 
 pub(crate) fn source_definition(source: SourceId) -> SourceDefinition {
     match source {
+        SourceId::Cldr => cldr::definition(),
+        SourceId::Crossref => crossref::definition(),
         SourceId::Gnd => gnd::definition(),
         SourceId::Musicbrainz => musicbrainz::definition(),
+        SourceId::NaturalEarth => natural_earth::definition(),
         SourceId::Orcid => orcid::definition(),
+        SourceId::Ror => ror::definition(),
         SourceId::Scowl => scowl::definition(),
         SourceId::StopwordsIso => stopwords_iso::definition(),
         SourceId::Wikidata => wikidata::definition(),
@@ -115,9 +135,13 @@ pub(crate) fn fetch_default(
     options: &FetchOptions,
 ) -> Result<ResolvedSource> {
     match source {
+        SourceId::Cldr => cldr::fetch(client),
+        SourceId::Crossref => crossref::fetch(client, options),
         SourceId::Gnd => gnd::fetch(client, options),
         SourceId::Musicbrainz => musicbrainz::fetch(client, options),
+        SourceId::NaturalEarth => natural_earth::fetch(client),
         SourceId::Orcid => orcid::fetch(client, options),
+        SourceId::Ror => ror::fetch(client, options),
         SourceId::Scowl => scowl::fetch(client),
         SourceId::StopwordsIso => stopwords_iso::fetch(client),
         SourceId::Wikidata => wikidata::fetch(client, options),
@@ -133,9 +157,13 @@ pub(crate) fn prepare_source(
 ) -> Result<PreparedLexicon> {
     let definition = source_definition(source);
     let NormalizedPayload { payload, report } = match source {
+        SourceId::Cldr => cldr::prepare(raw, options)?,
+        SourceId::Crossref => crossref::prepare(raw, options)?,
         SourceId::Gnd => gnd::prepare(raw, options)?,
         SourceId::Musicbrainz => musicbrainz::prepare(raw, options)?,
+        SourceId::NaturalEarth => natural_earth::prepare(raw, options)?,
         SourceId::Orcid => orcid::prepare(raw, options)?,
+        SourceId::Ror => ror::prepare(raw, options)?,
         SourceId::Scowl => scowl::prepare(raw, options)?,
         SourceId::StopwordsIso => stopwords_iso::prepare(raw, options)?,
         SourceId::Wikidata => wikidata::prepare(raw, options)?,
@@ -222,6 +250,37 @@ pub(crate) fn require_payload_kind(
     Ok(())
 }
 
+/// Whether a surface form has more than one whitespace-separated token, i.e.
+/// belongs in a multiword map rather than a single-word map.
+pub(crate) fn is_multiword(value: &str) -> bool {
+    value.split_whitespace().nth(1).is_some()
+}
+
+/// Validates that `requested` is one of `allowed`, producing the shared
+/// "supports only --payload-kind ..." error otherwise. Used by sources that
+/// accept several payload kinds.
+pub(crate) fn validate_payload_kind(
+    source: SourceId,
+    requested: PreparePayloadKind,
+    allowed: &[PreparePayloadKind],
+) -> Result<()> {
+    if allowed.contains(&requested) {
+        return Ok(());
+    }
+    let names: Vec<&str> = allowed.iter().copied().map(payload_kind_name).collect();
+    let list = match names.as_slice() {
+        [] => String::new(),
+        [only] => (*only).to_string(),
+        [head @ .., last] => format!("{}, or {}", head.join(", "), last),
+    };
+    Err(CliError::SourceMetadata(format!(
+        "{} supports only --payload-kind {} (received {})",
+        source.as_str(),
+        list,
+        payload_kind_name(requested)
+    )))
+}
+
 pub(crate) const fn payload_kind_name(kind: PreparePayloadKind) -> &'static str {
     match kind {
         PreparePayloadKind::WordSet => "word-set",
@@ -234,12 +293,27 @@ pub(crate) const fn payload_kind_name(kind: PreparePayloadKind) -> &'static str 
 
 #[cfg(test)]
 mod tests {
-    use super::{all_sources, source_definition, SourceId};
+    use super::{all_sources, is_multiword, source_definition, SourceId};
+
+    #[test]
+    fn is_multiword_covers_shared_contract() {
+        assert!(!is_multiword(""));
+        assert!(!is_multiword("word"));
+        assert!(is_multiword("two words"));
+        // Irregular whitespace (leading, trailing, tabs, runs) is still one token
+        // per non-empty run, so this counts as multiword.
+        assert!(is_multiword("  united \t states  "));
+        assert!(!is_multiword("   solo   "));
+    }
 
     #[test]
     fn exposes_source_registry() {
         let sources = all_sources();
-        assert_eq!(sources.len(), 7);
+        assert_eq!(sources.len(), 11);
         assert_eq!(source_definition(SourceId::Scowl).id.as_str(), "scowl");
+        assert_eq!(source_definition(SourceId::Crossref).id.as_str(), "crossref");
+        assert_eq!(source_definition(SourceId::Cldr).id.as_str(), "cldr");
+        assert_eq!(source_definition(SourceId::NaturalEarth).id.as_str(), "natural-earth");
+        assert_eq!(source_definition(SourceId::Ror).id.as_str(), "ror");
     }
 }
