@@ -415,6 +415,17 @@ fn lowers_name_particles_even_when_small_words_are_not() {
 }
 
 #[test]
+fn keeps_decomposed_words_intact() {
+    // NFD input ("étude" as `e` + U+0301 combining acute) is one word: the
+    // combining mark must not split it, which would capitalize the remainder.
+    assert_eq!(titlecase_mla("e\u{301}tude for piano"), "E\u{301}tude for Piano");
+    // The precomposed (NFC) spelling behaves identically.
+    assert_eq!(titlecase_mla("étude for piano"), "Étude for Piano");
+    // A possessive after a decomposed final letter stays one word.
+    assert_eq!(titlecase_mla("beyonce\u{301}'s world"), "Beyonce\u{301}'s World");
+}
+
+#[test]
 fn keeps_ordinal_suffixes_lowercase() {
     assert_eq!(titlecase_mla("miracle on 34th street"), "Miracle on 34th Street");
     assert_eq!(titlecase_mla("42nd street"), "42nd Street");

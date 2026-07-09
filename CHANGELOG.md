@@ -27,6 +27,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Decomposed (NFD) input no longer splits words at combining marks: `e\u{301}tude` ("étude" as `e` + combining acute, the form macOS filenames use) is tokenized as one word and cased as `Étude`, not `ÉTude`.
 - Protected spellings are never recased anymore: previously a protected word that matched the small-word list (or an `AlwaysLowercase` word-set entry) was force-lowercased, losing its protected form.
 
 - Contraction endings stay lowercase after apostrophes (`don't` → `Don't`, not `Don'T`); recapitalization now applies only to single-letter prefixes such as `O'Neill` and `D'Angelo`.
