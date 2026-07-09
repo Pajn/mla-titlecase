@@ -88,6 +88,8 @@ When callers load `MultiwordMap` plugins, the engine attempts longest-match phra
 
 That lets optional plugins preserve forms such as `New York City` without changing the built-in MLA semantics for callers who do not load any external data.
 
+The canonical phrase is emitted verbatim, with two exceptions. A phrase that covers a protected word is skipped entirely — protected spellings are never recased, by anything — and the covered words fall back to the per-word rules. And when the phrase starts the title or a subtitle segment, MLA's first-word rule capitalizes its first letter (`de la soul is dead` → `De la Soul Is Dead`).
+
 ## Name particles
 
 When `NameParticlePolicy::Heuristic` is enabled, common particles such as `van`, `de`, and `von` stay lowercase inside likely personal-name runs. A particle only qualifies when the words on both sides look like name words (in particular, neither neighbor is a small word), so "Riding the Van to Victory" keeps its capital while "Ludwig van Beethoven" stays lowered.

@@ -14,7 +14,7 @@ use crate::lexicon::{
 };
 use crate::token::Token;
 use crate::util::normalize::{lookup_key, normalized_key};
-use crate::util::unicode::push_lowercased;
+use crate::util::unicode::{append_uppercase, push_lowercased};
 
 pub(crate) fn apply(input: &str, tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> String {
     let mut output = String::new();
@@ -93,8 +93,21 @@ fn run<const RECORD: bool>(
         if let Some((end_index, canonical_phrase)) = options
             .external_lexicons
             .and_then(|lexicons| lexicons.multiword_spelling(tokens, index))
+            // Protected spellings are never recased, by anything, so a phrase
+            // covering one falls back to the per-word cascade.
+            .filter(|&(end_index, _)| !phrase_contains_protected(tokens, index, end_index, options))
         {
-            output.push_str(canonical_phrase);
+            // The canonical phrase is emitted verbatim except at the start of
+            // the title or a subtitle, where MLA's first-word rule outranks it:
+            // "de la soul is dead" opens with "De la Soul".
+            let capitalize_first = first == Some(index)
+                || (options.capitalize_after_subtitle_boundary
+                    && follows_subtitle_boundary(tokens, index));
+            if capitalize_first {
+                push_phrase_capitalized(output, canonical_phrase, options.locale);
+            } else {
+                output.push_str(canonical_phrase);
+            }
             if RECORD {
                 let source_start = token.text.as_ptr() as usize - base;
                 let end_token = &tokens[end_index];
@@ -125,6 +138,29 @@ fn run<const RECORD: bool>(
             );
         }
         index += 1;
+    }
+}
+
+/// True when any word covered by a multiword match has a protected spelling.
+fn phrase_contains_protected(
+    tokens: &[Token<'_>],
+    start: usize,
+    end: usize,
+    options: &TitleCaseOptions<'_>,
+) -> bool {
+    tokens[start..=end].iter().any(|token| {
+        token.is_word()
+            && protected_spelling(token.text, &normalized_key(token.text), options).is_some()
+    })
+}
+
+/// Appends a canonical phrase with its first letter capitalized, for phrases
+/// that start a title or subtitle segment.
+fn push_phrase_capitalized(output: &mut String, phrase: &str, locale: LocaleProfile) {
+    let mut chars = phrase.chars();
+    if let Some(first) = chars.next() {
+        append_uppercase(output, first, locale);
+        output.push_str(chars.as_str());
     }
 }
 

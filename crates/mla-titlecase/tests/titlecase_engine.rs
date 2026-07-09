@@ -308,6 +308,42 @@ fn supports_additive_external_lexicons() {
 }
 
 #[test]
+fn protected_spellings_win_over_multiword_matches() {
+    // A protected word inside a matched phrase suppresses the multiword
+    // match: protected spellings are never recased, by anything.
+    let mut lexicons = ExternalLexicons::default();
+    lexicons.add_multiword_map([("new york city", "New York City")]);
+    let options = TitleCaseOptions {
+        protected_words: &["YORK"],
+        external_lexicons: Some(&lexicons),
+        ..TitleCaseOptions::default()
+    };
+    assert_eq!(titlecase_with_options("new york city stories", &options), "New YORK City Stories");
+}
+
+#[test]
+fn first_word_rule_beats_multiword_matches() {
+    let mut lexicons = ExternalLexicons::default();
+    lexicons.add_multiword_map([("de la soul", "de la Soul"), ("the beatles", "the Beatles")]);
+    let options = TitleCaseOptions::with_external_lexicons(&lexicons);
+
+    // A title never starts lowercase, even when the canonical phrase does
+    // (titlecaseconverter.com MLA: "De la Soul Is Dead").
+    assert_eq!(titlecase_with_options("de la soul is dead", &options), "De la Soul Is Dead");
+    assert_eq!(titlecase_with_options("the beatles anthology", &options), "The Beatles Anthology");
+    // Mid-title the canonical phrase is emitted verbatim.
+    assert_eq!(
+        titlecase_with_options("dancing with de la soul tonight", &options),
+        "Dancing with de la Soul Tonight"
+    );
+    // The first word after a subtitle boundary capitalizes too.
+    assert_eq!(
+        titlecase_with_options("three feet high: de la soul rising", &options),
+        "Three Feet High: De la Soul Rising"
+    );
+}
+
+#[test]
 fn protected_spellings_survive_small_word_lowering() {
     // "via" is a built-in small word, but the protected spelling wins.
     let options = TitleCaseOptions::with_protected_words(&["VIA"]);
