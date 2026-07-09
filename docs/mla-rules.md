@@ -44,7 +44,8 @@ Only true hyphens (`-`, U+2010, U+2011) join compounds. Figure, en, and em dashe
 - all-caps acronyms such as `NASA` are preserved when the rest of the title contains lowercase letters, or when the acronym is the only word
 - fully all-caps multi-word input is treated as shouting and recased to title case; known abbreviations (`MLA`, `NASA`, `USA`, ...) are restored from the built-in abbreviation list, and protected spellings are kept
 - dotted initialisms such as `u.s.a.` normalize to `U.S.A.`
-- lowercase dotted abbreviations like `e.g.`, `i.e.`, `a.m.`, and `p.m.` remain lowercase
+- lowercase dotted abbreviations like `e.g.`, `i.e.`, `a.m.`, and `p.m.` remain lowercase mid-title; at a mandatory-capitalize position (first or last word of the title or a subtitle segment) the first-and-last-word rule wins — Latin abbreviations raise only their first letter (`E.g. a Case Study`) while the meridiem markers restore full initialism caps (`A.M. Radio Days`)
+- irregular dotted words such as `example.com` are kept verbatim in every position
 
 The built-in abbreviation list applies to all input, not just all-caps titles, so `the ibm story` also becomes `The IBM Story`. For that reason every entry is an initialism that is never an ordinary English word (`us`, `led`, `id` are deliberately excluded so normal titles are never corrupted).
 

@@ -234,11 +234,11 @@ fn emit_word<const RECORD: bool>(
         let lowered = lowercase_word(token.text, options.locale);
         // The rule is known to be `AllCapsNormalized`, so the styling outcome is
         // not needed here.
-        let _ = push_styled(output, &lowered, true, options);
+        let _ = push_styled(output, &lowered, true, should_capitalize, options);
         return CasingRule::AllCapsNormalized;
     }
 
-    let outcome = push_styled(output, token.text, true, options);
+    let outcome = push_styled(output, token.text, true, should_capitalize, options);
     if RECORD {
         rule_for_style(
             outcome,

@@ -368,6 +368,26 @@ fn preserves_acronyms_and_dotted_abbreviations() {
 }
 
 #[test]
+fn first_and_last_word_rule_beats_lowercase_dotted_abbreviations() {
+    // MLA always capitalizes the first and last words. Latin abbreviations
+    // raise only their first letter at a mandatory position, matching
+    // titlecaseconverter.com's MLA output ("E.g. a Case Study").
+    assert_eq!(titlecase_mla("e.g. a case study"), "E.g. a Case Study");
+    assert_eq!(titlecase_mla("i.e. the final word"), "I.e. the Final Word");
+    // Meridiem markers are ordinary initialisms, so a mandatory position
+    // restores full caps ("A.M. Radio Days"), again per titlecaseconverter.com.
+    assert_eq!(titlecase_mla("a.m. radio days"), "A.M. Radio Days");
+    assert_eq!(titlecase_mla("wake me at 3 a.m."), "Wake Me at 3 A.M.");
+    // Mid-title both kinds stay lowercase.
+    assert_eq!(titlecase_mla("meet me at 9 a.m. sharp"), "Meet Me at 9 a.m. Sharp");
+    // The same rule applies across a subtitle boundary.
+    assert_eq!(titlecase_mla("chapter one: e.g. examples"), "Chapter One: E.g. Examples");
+    // Irregular dotted words stay verbatim even at a mandatory position;
+    // their casing is not ours to guess.
+    assert_eq!(titlecase_mla("example.com and beyond"), "example.com and Beyond");
+}
+
+#[test]
 fn capitalizes_subordinating_conjunctions() {
     assert_eq!(titlecase_mla("what if that happens"), "What If That Happens");
     assert_eq!(titlecase_mla("stronger than pride"), "Stronger Than Pride");

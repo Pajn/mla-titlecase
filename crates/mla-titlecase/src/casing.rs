@@ -44,9 +44,14 @@ pub(crate) fn has_internal_caps(word: &str) -> bool {
 }
 
 #[cfg(test)]
-pub(crate) fn style_word(word: &str, capitalize: bool, options: &TitleCaseOptions<'_>) -> String {
+pub(crate) fn style_word(
+    word: &str,
+    capitalize: bool,
+    force_capitalize: bool,
+    options: &TitleCaseOptions<'_>,
+) -> String {
     let mut out = String::with_capacity(word.len());
-    let _ = push_styled(&mut out, word, capitalize, options);
+    let _ = push_styled(&mut out, word, capitalize, force_capitalize, options);
     out
 }
 
@@ -66,10 +71,15 @@ pub(crate) enum StyleOutcome {
 /// that `style_word` would allocate before being copied into the result. The
 /// returned [`StyleOutcome`] reports which rule applied (free for callers that
 /// ignore it).
+///
+/// `force_capitalize` marks a mandatory-capitalize position (first or last word
+/// of the title or a subtitle segment), where MLA's first-and-last-word rule
+/// outranks the lowercase dotted-abbreviation list.
 pub(crate) fn push_styled(
     out: &mut String,
     word: &str,
     capitalize: bool,
+    force_capitalize: bool,
     options: &TitleCaseOptions<'_>,
 ) -> StyleOutcome {
     if is_all_caps_acronym(word) {
@@ -78,7 +88,7 @@ pub(crate) fn push_styled(
     }
 
     if is_dotted_abbreviation(word) {
-        out.push_str(&style_dotted_abbreviation(word));
+        push_dotted_abbreviation(out, word, force_capitalize);
         return StyleOutcome::DottedAbbreviation;
     }
 
@@ -96,12 +106,33 @@ pub(crate) fn push_styled(
     StyleOutcome::Capitalized
 }
 
-fn style_dotted_abbreviation(word: &str) -> String {
-    const LOWERCASE_DOTTED_ABBREVIATIONS: &[&str] = &["a.m.", "e.g.", "i.e.", "p.m."];
+fn push_dotted_abbreviation(out: &mut String, word: &str, force_capitalize: bool) {
+    // Latin abbreviations stay lowercase; at a mandatory-capitalize position
+    // only their first letter rises ("E.g. a Case Study"), matching MLA per
+    // titlecaseconverter.com.
+    const LATIN_ABBREVIATIONS: &[&str] = &["e.g.", "i.e."];
+    // Meridiem markers also stay lowercase mid-title, but they are ordinary
+    // initialisms, so a mandatory position restores full caps ("A.M. Radio
+    // Days" rather than "A.m."), again per titlecaseconverter.com.
+    const MERIDIEM_ABBREVIATIONS: &[&str] = &["a.m.", "p.m."];
 
     let lowered = word.to_lowercase();
-    if LOWERCASE_DOTTED_ABBREVIATIONS.contains(&lowered.as_str()) {
-        return lowered;
+    if LATIN_ABBREVIATIONS.contains(&lowered.as_str()) {
+        if force_capitalize {
+            let mut chars = lowered.chars();
+            if let Some(first) = chars.next() {
+                out.extend(first.to_uppercase());
+                out.push_str(chars.as_str());
+            }
+        } else {
+            out.push_str(&lowered);
+        }
+        return;
+    }
+
+    if MERIDIEM_ABBREVIATIONS.contains(&lowered.as_str()) && !force_capitalize {
+        out.push_str(&lowered);
+        return;
     }
 
     let segments: Vec<&str> = word.split('.').filter(|segment| !segment.is_empty()).collect();
@@ -109,20 +140,19 @@ fn style_dotted_abbreviation(word: &str) -> String {
         !segments.is_empty() && segments.iter().all(|segment| segment.chars().count() == 1);
 
     if !is_initialism {
-        return word.to_string();
+        // Irregular dotted words ("example.com") are kept verbatim even at a
+        // mandatory position; their casing is not ours to guess.
+        out.push_str(word);
+        return;
     }
 
-    let mut result = String::with_capacity(word.len());
     for ch in word.chars() {
         if ch.is_alphabetic() {
-            for mapped in ch.to_uppercase() {
-                result.push(mapped);
-            }
+            out.extend(ch.to_uppercase());
         } else {
-            result.push(ch);
+            out.push(ch);
         }
     }
-    result
 }
 
 #[cfg(test)]
@@ -157,10 +187,23 @@ mod tests {
     #[test]
     fn uppercases_initialism_style_abbreviations() {
         let options = TitleCaseOptions::default();
-        assert_eq!(style_word("u.s.a.", true, &options), "U.S.A.");
-        assert_eq!(style_word("e.g.", true, &options), "e.g.");
-        assert_eq!(style_word("a.m.", true, &options), "a.m.");
-        assert_eq!(style_word("p.m.", true, &options), "p.m.");
+        assert_eq!(style_word("u.s.a.", true, false, &options), "U.S.A.");
+        assert_eq!(style_word("e.g.", true, false, &options), "e.g.");
+        assert_eq!(style_word("a.m.", true, false, &options), "a.m.");
+        assert_eq!(style_word("p.m.", true, false, &options), "p.m.");
+    }
+
+    #[test]
+    fn mandatory_positions_capitalize_lowercase_abbreviations() {
+        let options = TitleCaseOptions::default();
+        // Latin abbreviations raise only their first letter.
+        assert_eq!(style_word("e.g.", true, true, &options), "E.g.");
+        assert_eq!(style_word("i.e.", true, true, &options), "I.e.");
+        // Meridiem markers are ordinary initialisms and restore full caps.
+        assert_eq!(style_word("a.m.", true, true, &options), "A.M.");
+        assert_eq!(style_word("p.m.", true, true, &options), "P.M.");
+        // Irregular dotted words are verbatim regardless of position.
+        assert_eq!(style_word("example.com", true, true, &options), "example.com");
     }
 
     #[test]

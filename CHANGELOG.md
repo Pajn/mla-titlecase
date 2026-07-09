@@ -28,6 +28,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- The first-and-last-word rule now outranks the lowercase dotted-abbreviation list, so a title no longer starts or ends lowercase: `e.g. a case study` → `E.g. a Case Study` (first letter only, per titlecaseconverter.com's MLA output) and `a.m. radio days` → `A.M. Radio Days` (the meridiem markers are ordinary initialisms, so a mandatory position restores full caps). Mid-title both kinds stay lowercase, and irregular dotted words (`example.com`) remain verbatim in every position.
 - Digit-led mixed-case words keep their capitals under `preserve_existing_caps`: `the 3D movie` → `The 3D Movie` and `shot in 4K` → `Shot in 4K`, instead of `3d`/`4k`. The capital after a leading digit now counts as internal casing, like the `P` in `iPhone`; ordinals (`42nd`) are unaffected.
 - Decomposed (NFD) input no longer splits words at combining marks: `e\u{301}tude` ("étude" as `e` + combining acute, the form macOS filenames use) is tokenized as one word and cased as `Étude`, not `ÉTude`.
 - Protected spellings are never recased anymore: previously a protected word that matched the small-word list (or an `AlwaysLowercase` word-set entry) was force-lowercased, losing its protected form.
