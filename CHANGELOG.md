@@ -27,6 +27,7 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- Digit-led mixed-case words keep their capitals under `preserve_existing_caps`: `the 3D movie` → `The 3D Movie` and `shot in 4K` → `Shot in 4K`, instead of `3d`/`4k`. The capital after a leading digit now counts as internal casing, like the `P` in `iPhone`; ordinals (`42nd`) are unaffected.
 - Decomposed (NFD) input no longer splits words at combining marks: `e\u{301}tude` ("étude" as `e` + combining acute, the form macOS filenames use) is tokenized as one word and cased as `Étude`, not `ÉTude`.
 - Protected spellings are never recased anymore: previously a protected word that matched the small-word list (or an `AlwaysLowercase` word-set entry) was force-lowercased, losing its protected form.
 

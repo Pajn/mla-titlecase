@@ -27,14 +27,17 @@ pub(crate) fn is_dotted_abbreviation(word: &str) -> bool {
 }
 
 pub(crate) fn has_internal_caps(word: &str) -> bool {
+    // The first alphanumeric character occupies the capitalized position, so
+    // a capital after a leading digit is internal ("3D", "4K") and preserved
+    // like any other intentional mixed casing.
     let mut seen_initial = false;
     for ch in word.chars() {
-        if ch.is_alphabetic() {
-            if !seen_initial {
-                seen_initial = true;
-            } else if ch.is_uppercase() {
+        if seen_initial {
+            if ch.is_uppercase() {
                 return true;
             }
+        } else if ch.is_alphanumeric() {
+            seen_initial = true;
         }
     }
     false
@@ -137,6 +140,12 @@ mod tests {
     fn detects_internal_caps() {
         assert!(has_internal_caps("iPhone"));
         assert!(!has_internal_caps("Apple"));
+        // A leading digit occupies the capitalized position, so a capital
+        // after it counts as internal ("3D", "4K"); ordinals do not.
+        assert!(has_internal_caps("3D"));
+        assert!(has_internal_caps("4K"));
+        assert!(!has_internal_caps("42nd"));
+        assert!(!has_internal_caps("3d"));
     }
 
     #[test]

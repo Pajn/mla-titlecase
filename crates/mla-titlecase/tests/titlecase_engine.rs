@@ -432,6 +432,17 @@ fn keeps_ordinal_suffixes_lowercase() {
 }
 
 #[test]
+fn preserves_digit_led_mixed_case_words() {
+    // A capital after a leading digit is intentional caps ("3D", "4K"), not a
+    // word-initial capital, so preserve_existing_caps keeps it.
+    assert_eq!(titlecase_mla("the 3D movie"), "The 3D Movie");
+    assert_eq!(titlecase_mla("shot in 4K"), "Shot in 4K");
+    assert_eq!(titlecase_mla("my 2FA setup"), "My 2FA Setup");
+    // Without caps in the input there is nothing to preserve.
+    assert_eq!(titlecase_mla("the 3d movie"), "The 3d Movie");
+}
+
+#[test]
 fn recases_all_caps_input() {
     assert_eq!(titlecase_mla("THE WIND IN THE WILLOWS"), "The Wind in the Willows");
     assert_eq!(titlecase_mla("MLA HANDBOOK"), "MLA Handbook");
