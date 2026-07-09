@@ -25,9 +25,11 @@ Prepositional uses stay lowercase ("Walking down the Street", "Livin' on a Praye
 
 The first and last significant words are always capitalized, even if they are normally treated as small words.
 
-## Colon behavior
+## Subtitle boundaries
 
-When `capitalize_after_colon` is enabled (the default), a colon is treated as a subtitle boundary: the first significant word after it and the last significant word before it are capitalized, matching MLA's rule that the first and last words of both the title and the subtitle are capitalized.
+When `capitalize_after_subtitle_boundary` is enabled (the default), a colon, question mark, or exclamation point is treated as a subtitle boundary: the first significant word after it and the last significant word before it are capitalized, matching MLA's rule that the first and last words of both the title and the subtitle are capitalized (`What Now? A Memoir`, `Help! An Inspector Calls`, `Preface: The Return of Sherlock Holmes`).
+
+Periods are not boundaries — they are far more often part of an abbreviation — and figure, en, and em dashes separate clauses rather than subtitles (`Well-Known—a Memoir of Sorts`).
 
 ## Hyphen behavior
 
@@ -97,7 +99,7 @@ Locale profiles widen that heuristic carefully for supported languages such as D
 
 `Confidence` has three tiers:
 
-- `Solid` — a structural MLA rule (first/last word, colon boundary, hyphenated-compound start) or an explicit match (protected spelling, abbreviation, dotted initialism, canonical/multiword lexicon, `'n'` contraction, small word, preserved mixed case).
+- `Solid` — a structural MLA rule (first/last word, subtitle boundary, hyphenated-compound start) or an explicit match (protected spelling, abbreviation, dotted initialism, canonical/multiword lexicon, `'n'` contraction, small word, preserved mixed case).
 - `Unverified` — an ordinary word capitalized with no lexicon to confirm it is not a name or brand. Correct under MLA, but the open-world "a lexicon might disagree" case applies to nearly every plain word, so it is a separate, lower-priority tier rather than an ambiguity flag.
 - `Heuristic` — a decision that could genuinely be wrong: adverbial-particle detection, the name-particle heuristic, all-caps word-versus-acronym classification, and the dual-role prepositions (`after`, `before`, `since`, `till`, `until`).
 

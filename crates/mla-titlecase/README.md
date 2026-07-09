@@ -15,8 +15,9 @@ assert_eq!(titlecase_mla("the wind in the willows"), "The Wind in the Willows");
 
 ## What it does
 
-- Capitalizes the first and last words of the title and of each subtitle (colon
-  boundary), and any word that is not a small word.
+- Capitalizes the first and last words of the title and of each subtitle (after
+  a colon, question mark, or exclamation point), and any word that is not a
+  small word.
 - Lowercases MLA small words (articles, coordinating conjunctions, prepositions
   of any length) when they appear internally.
 - Handles the awkward cases: subordinating conjunctions stay capitalized,
@@ -53,7 +54,7 @@ assert_eq!(
 | Field | Default | Controls |
 | --- | --- | --- |
 | `preserve_existing_caps` | `true` | Keep mixed-case input like `iPhone`. |
-| `capitalize_after_colon` | `true` | Treat colons as subtitle boundaries. |
+| `capitalize_after_subtitle_boundary` | `true` | Treat colons, question marks, and exclamation points as subtitle boundaries. |
 | `capitalize_phrasal_particles` | `true` | Capitalize adverbial particles (`Give Up`). |
 | `all_caps_policy` | `Normalize` | How to handle all-caps ("shouting") input. |
 | `small_word_policy` | `Mla` | Which words to lowercase internally. |

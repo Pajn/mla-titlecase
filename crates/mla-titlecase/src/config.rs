@@ -106,9 +106,10 @@ pub enum LocaleProfile {
 pub struct TitleCaseOptions<'a> {
     /// Preserve mixed-case input such as `iPhone` when the word is not forced lowercase.
     pub preserve_existing_caps: bool,
-    /// Treat colons as subtitle boundaries: capitalize the first significant
-    /// word after a colon and the last one before it.
-    pub capitalize_after_colon: bool,
+    /// Treat colons, question marks, and exclamation points as subtitle
+    /// boundaries: capitalize the first significant word after the boundary
+    /// and the last one before it.
+    pub capitalize_after_subtitle_boundary: bool,
     /// Capitalize small words acting as adverbial particles rather than
     /// prepositions (`Give Up`, `Turn Off the Lights`).
     pub capitalize_phrasal_particles: bool,
@@ -133,7 +134,7 @@ impl<'a> Default for TitleCaseOptions<'a> {
     fn default() -> Self {
         Self {
             preserve_existing_caps: true,
-            capitalize_after_colon: true,
+            capitalize_after_subtitle_boundary: true,
             capitalize_phrasal_particles: true,
             all_caps_policy: AllCapsPolicy::Normalize,
             small_word_policy: SmallWordPolicy::Mla,

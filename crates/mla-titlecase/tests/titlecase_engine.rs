@@ -234,6 +234,29 @@ fn capitalizes_last_word_before_colon() {
 }
 
 #[test]
+fn treats_question_and_exclamation_marks_as_subtitle_boundaries() {
+    // MLA capitalizes the first and last words of both the title and the
+    // subtitle, whichever punctuation separates them.
+    assert_eq!(titlecase_mla("what now? a memoir"), "What Now? A Memoir");
+    assert_eq!(titlecase_mla("help! an inspector calls"), "Help! An Inspector Calls");
+    // The last significant word before the boundary is capitalized too.
+    assert_eq!(
+        titlecase_mla("what are we waiting for? a study"),
+        "What Are We Waiting For? A Study"
+    );
+    // An em dash is not a subtitle boundary.
+    assert_eq!(
+        titlecase_mla("well-known\u{2014}a memoir of sorts"),
+        "Well-Known\u{2014}a Memoir of Sorts"
+    );
+    // The boundary capitalizes through opening quotes, like a colon does.
+    assert_eq!(
+        titlecase_mla("really? \u{201C}the sequel\u{201D}"),
+        "Really? \u{201C}The Sequel\u{201D}"
+    );
+}
+
+#[test]
 fn handles_hyphenated_compounds() {
     assert_eq!(titlecase_mla("state-of-the-art design"), "State-of-the-Art Design");
 

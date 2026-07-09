@@ -51,7 +51,8 @@ pub enum CasingRule {
     FirstWord,
     /// Capitalized as the last significant word of the title.
     LastWord,
-    /// Capitalized as the first or last word across a colon (subtitle boundary).
+    /// Capitalized as the first or last word across a subtitle boundary
+    /// (colon, question mark, or exclamation point).
     SubtitleBoundary,
     /// Capitalized as part of a hyphenated compound.
     HyphenatedCompound,
