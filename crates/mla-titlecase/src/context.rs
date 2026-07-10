@@ -1,5 +1,6 @@
 use crate::classify::{
     is_apostrophe, is_closing_punctuation, is_hyphen, is_opening_punctuation, is_significant_word,
+    is_subtitle_boundary,
 };
 use crate::lexicon::{is_adverbial_particle, is_phrasal_verb_pair, is_small_word};
 use crate::token::{Token, TokenKind};
@@ -13,7 +14,7 @@ pub(crate) fn last_significant_word(tokens: &[Token<'_>]) -> Option<usize> {
     tokens.iter().rposition(|token| is_significant_word(*token))
 }
 
-pub(crate) fn follows_colon(tokens: &[Token<'_>], index: usize) -> bool {
+pub(crate) fn follows_subtitle_boundary(tokens: &[Token<'_>], index: usize) -> bool {
     let mut cursor = index;
     while cursor > 0 {
         cursor -= 1;
@@ -21,7 +22,7 @@ pub(crate) fn follows_colon(tokens: &[Token<'_>], index: usize) -> bool {
         if token.is_word() {
             return false;
         }
-        if token.kind == TokenKind::Colon {
+        if is_subtitle_boundary(token) {
             return true;
         }
         if !token.text.chars().all(char::is_whitespace) && !is_opening_punctuation(token) {
@@ -31,12 +32,12 @@ pub(crate) fn follows_colon(tokens: &[Token<'_>], index: usize) -> bool {
     false
 }
 
-pub(crate) fn precedes_colon(tokens: &[Token<'_>], index: usize) -> bool {
+pub(crate) fn precedes_subtitle_boundary(tokens: &[Token<'_>], index: usize) -> bool {
     for token in &tokens[index + 1..] {
         if token.is_word() {
             return false;
         }
-        if token.kind == TokenKind::Colon {
+        if is_subtitle_boundary(*token) {
             return true;
         }
         if !token.text.chars().all(char::is_whitespace) && !is_closing_punctuation(*token) {
@@ -153,23 +154,36 @@ fn next_word<'a>(tokens: &'a [Token<'a>], index: usize) -> Option<Token<'a>> {
 
 #[cfg(test)]
 mod tests {
-    use super::{follows_colon, likely_name_particle_context, part_of_hyphenated_compound};
+    use super::{
+        follows_subtitle_boundary, likely_name_particle_context, part_of_hyphenated_compound,
+    };
     use crate::tokenizer::tokenize;
 
     #[test]
-    fn detects_colon_context() {
-        let tokens = tokenize("Title: the sequel");
+    fn detects_subtitle_boundary_context() {
+        for input in ["Title: the sequel", "Title? the sequel", "Title! the sequel"] {
+            let tokens = tokenize(input);
+            let word_index = tokens.iter().position(|token| token.text == "the").unwrap();
+            assert!(follows_subtitle_boundary(&tokens, word_index), "no boundary in {input:?}");
+        }
+        // An em dash separates clauses, not subtitles.
+        let tokens = tokenize("Title\u{2014}the sequel");
         let word_index = tokens.iter().position(|token| token.text == "the").unwrap();
-        assert!(follows_colon(&tokens, word_index));
+        assert!(!follows_subtitle_boundary(&tokens, word_index));
     }
 
     #[test]
-    fn detects_word_preceding_colon() {
-        let tokens = tokenize("made of: a study");
-        let word_index = tokens.iter().position(|token| token.text == "of").unwrap();
-        assert!(super::precedes_colon(&tokens, word_index));
-        let word_index = tokens.iter().position(|token| token.text == "made").unwrap();
-        assert!(!super::precedes_colon(&tokens, word_index));
+    fn detects_word_preceding_subtitle_boundary() {
+        for input in ["made of: a study", "made of? a study", "made of! a study"] {
+            let tokens = tokenize(input);
+            let word_index = tokens.iter().position(|token| token.text == "of").unwrap();
+            assert!(
+                super::precedes_subtitle_boundary(&tokens, word_index),
+                "no boundary in {input:?}"
+            );
+            let word_index = tokens.iter().position(|token| token.text == "made").unwrap();
+            assert!(!super::precedes_subtitle_boundary(&tokens, word_index));
+        }
     }
 
     #[test]

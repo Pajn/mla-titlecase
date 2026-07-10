@@ -60,6 +60,7 @@ fn scan_word(input: &str, start: usize) -> usize {
         let next = chars.peek().map(|(_, value)| *value);
 
         let consumes = ch.is_alphanumeric()
+            || is_combining_mark(ch)
             || is_apostrophe_connector(ch, absolute, input)
             || (ch == '.' && next.is_some_and(char::is_alphanumeric))
             || (ch == '.' && saw_dot_pair);
@@ -78,14 +79,31 @@ fn scan_word(input: &str, start: usize) -> usize {
     end
 }
 
+/// True for combining marks, which continue the word of the base character
+/// they modify. Keeps decomposed (NFD) input such as `e\u{301}tude` one word.
+/// Covers the dedicated combining blocks; marks never start a word because
+/// [`tokenize`] only enters [`scan_word`] on an alphanumeric character.
+fn is_combining_mark(ch: char) -> bool {
+    matches!(
+        ch,
+        '\u{0300}'..='\u{036F}' // Combining Diacritical Marks
+        | '\u{0483}'..='\u{0489}' // Combining Cyrillic marks
+        | '\u{1AB0}'..='\u{1AFF}' // Combining Diacritical Marks Extended
+        | '\u{1DC0}'..='\u{1DFF}' // Combining Diacritical Marks Supplement
+        | '\u{20D0}'..='\u{20FF}' // Combining Marks for Symbols
+        | '\u{FE20}'..='\u{FE2F}' // Combining Half Marks
+    )
+}
+
 fn is_apostrophe_connector(ch: char, index: usize, input: &str) -> bool {
     if !matches!(ch, '\'' | '\u{2019}') {
         return false;
     }
 
+    let is_word_char = |ch: char| ch.is_alphanumeric() || is_combining_mark(ch);
     let before = input[..index].chars().next_back();
     let after = input[index + ch.len_utf8()..].chars().next();
-    before.is_some_and(char::is_alphanumeric) && after.is_some_and(char::is_alphanumeric)
+    before.is_some_and(is_word_char) && after.is_some_and(char::is_alphanumeric)
 }
 
 #[cfg(test)]
@@ -132,6 +150,15 @@ mod tests {
         let texts: Vec<_> =
             tokens.iter().filter(|token| token.is_word()).map(|token| token.text).collect();
         assert_eq!(texts, vec!["o'neill", "and", "rock'n'roll"]);
+    }
+
+    #[test]
+    fn keeps_combining_marks_inside_words() {
+        // NFD input: the combining acute continues the word it modifies.
+        let tokens = tokenize("e\u{301}tude and beyonce\u{301}'s hits");
+        let texts: Vec<_> =
+            tokens.iter().filter(|token| token.is_word()).map(|token| token.text).collect();
+        assert_eq!(texts, vec!["e\u{301}tude", "and", "beyonce\u{301}'s", "hits"]);
     }
 
     #[test]

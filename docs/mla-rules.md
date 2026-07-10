@@ -25,9 +25,11 @@ Prepositional uses stay lowercase ("Walking down the Street", "Livin' on a Praye
 
 The first and last significant words are always capitalized, even if they are normally treated as small words.
 
-## Colon behavior
+## Subtitle boundaries
 
-When `capitalize_after_colon` is enabled (the default), a colon is treated as a subtitle boundary: the first significant word after it and the last significant word before it are capitalized, matching MLA's rule that the first and last words of both the title and the subtitle are capitalized.
+When `capitalize_after_subtitle_boundary` is enabled (the default), a colon, question mark, or exclamation point is treated as a subtitle boundary: the first significant word after it and the last significant word before it are capitalized, matching MLA's rule that the first and last words of both the title and the subtitle are capitalized (`What Now? A Memoir`, `Help! An Inspector Calls`, `Preface: The Return of Sherlock Holmes`).
+
+Periods are not boundaries — they are far more often part of an abbreviation — and figure, en, and em dashes separate clauses rather than subtitles (`Well-Known—a Memoir of Sorts`).
 
 ## Hyphen behavior
 
@@ -42,7 +44,8 @@ Only true hyphens (`-`, U+2010, U+2011) join compounds. Figure, en, and em dashe
 - all-caps acronyms such as `NASA` are preserved when the rest of the title contains lowercase letters, or when the acronym is the only word
 - fully all-caps multi-word input is treated as shouting and recased to title case; known abbreviations (`MLA`, `NASA`, `USA`, ...) are restored from the built-in abbreviation list, and protected spellings are kept
 - dotted initialisms such as `u.s.a.` normalize to `U.S.A.`
-- lowercase dotted abbreviations like `e.g.`, `i.e.`, `a.m.`, and `p.m.` remain lowercase
+- lowercase dotted abbreviations like `e.g.`, `i.e.`, `a.m.`, and `p.m.` remain lowercase mid-title; at a mandatory-capitalize position (first or last word of the title or a subtitle segment) the first-and-last-word rule wins — Latin abbreviations raise only their first letter (`E.g. a Case Study`) while the meridiem markers restore full initialism caps (`A.M. Radio Days`)
+- irregular dotted words such as `example.com` are kept verbatim in every position
 
 The built-in abbreviation list applies to all input, not just all-caps titles, so `the ibm story` also becomes `The IBM Story`. For that reason every entry is an initialism that is never an ordinary English word (`us`, `led`, `id` are deliberately excluded so normal titles are never corrupted).
 
@@ -85,6 +88,8 @@ When callers load `MultiwordMap` plugins, the engine attempts longest-match phra
 
 That lets optional plugins preserve forms such as `New York City` without changing the built-in MLA semantics for callers who do not load any external data.
 
+The canonical phrase is emitted verbatim, with two exceptions. A phrase that covers a protected word is skipped entirely — protected spellings are never recased, by anything — and the covered words fall back to the per-word rules. And when the phrase starts the title or a subtitle segment, MLA's first-word rule capitalizes its first letter (`de la soul is dead` → `De la Soul Is Dead`).
+
 ## Name particles
 
 When `NameParticlePolicy::Heuristic` is enabled, common particles such as `van`, `de`, and `von` stay lowercase inside likely personal-name runs. A particle only qualifies when the words on both sides look like name words (in particular, neither neighbor is a small word), so "Riding the Van to Victory" keeps its capital while "Ludwig van Beethoven" stays lowered.
@@ -97,7 +102,7 @@ Locale profiles widen that heuristic carefully for supported languages such as D
 
 `Confidence` has three tiers:
 
-- `Solid` — a structural MLA rule (first/last word, colon boundary, hyphenated-compound start) or an explicit match (protected spelling, abbreviation, dotted initialism, canonical/multiword lexicon, `'n'` contraction, small word, preserved mixed case).
+- `Solid` — a structural MLA rule (first/last word, subtitle boundary, hyphenated-compound start) or an explicit match (protected spelling, abbreviation, dotted initialism, canonical/multiword lexicon, `'n'` contraction, small word, preserved mixed case).
 - `Unverified` — an ordinary word capitalized with no lexicon to confirm it is not a name or brand. Correct under MLA, but the open-world "a lexicon might disagree" case applies to nearly every plain word, so it is a separate, lower-priority tier rather than an ambiguity flag.
 - `Heuristic` — a decision that could genuinely be wrong: adverbial-particle detection, the name-particle heuristic, all-caps word-versus-acronym classification, and the dual-role prepositions (`after`, `before`, `since`, `till`, `until`).
 

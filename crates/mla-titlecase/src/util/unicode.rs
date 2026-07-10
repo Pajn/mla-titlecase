@@ -129,7 +129,7 @@ fn capitalizes_after_apostrophe(lowered: &str, index: usize, apostrophe: char) -
     !CONTRACTION_SUFFIXES.contains(&following.as_str())
 }
 
-fn append_uppercase(output: &mut String, ch: char, locale: LocaleProfile) {
+pub(crate) fn append_uppercase(output: &mut String, ch: char, locale: LocaleProfile) {
     match (locale, ch) {
         (LocaleProfile::Turkish, 'i') => output.push('\u{0130}'),
         (LocaleProfile::Turkish, 'ı') => output.push('I'),

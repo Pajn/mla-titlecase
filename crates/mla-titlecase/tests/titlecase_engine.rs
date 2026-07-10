@@ -234,6 +234,29 @@ fn capitalizes_last_word_before_colon() {
 }
 
 #[test]
+fn treats_question_and_exclamation_marks_as_subtitle_boundaries() {
+    // MLA capitalizes the first and last words of both the title and the
+    // subtitle, whichever punctuation separates them.
+    assert_eq!(titlecase_mla("what now? a memoir"), "What Now? A Memoir");
+    assert_eq!(titlecase_mla("help! an inspector calls"), "Help! An Inspector Calls");
+    // The last significant word before the boundary is capitalized too.
+    assert_eq!(
+        titlecase_mla("what are we waiting for? a study"),
+        "What Are We Waiting For? A Study"
+    );
+    // An em dash is not a subtitle boundary.
+    assert_eq!(
+        titlecase_mla("well-known\u{2014}a memoir of sorts"),
+        "Well-Known\u{2014}a Memoir of Sorts"
+    );
+    // The boundary capitalizes through opening quotes, like a colon does.
+    assert_eq!(
+        titlecase_mla("really? \u{201C}the sequel\u{201D}"),
+        "Really? \u{201C}The Sequel\u{201D}"
+    );
+}
+
+#[test]
 fn handles_hyphenated_compounds() {
     assert_eq!(titlecase_mla("state-of-the-art design"), "State-of-the-Art Design");
 
@@ -282,6 +305,42 @@ fn supports_additive_external_lexicons() {
         "Copilot amidst Postgres Updates"
     );
     assert_eq!(titlecase_with_options("new york city stories", &options), "New York City Stories");
+}
+
+#[test]
+fn protected_spellings_win_over_multiword_matches() {
+    // A protected word inside a matched phrase suppresses the multiword
+    // match: protected spellings are never recased, by anything.
+    let mut lexicons = ExternalLexicons::default();
+    lexicons.add_multiword_map([("new york city", "New York City")]);
+    let options = TitleCaseOptions {
+        protected_words: &["YORK"],
+        external_lexicons: Some(&lexicons),
+        ..TitleCaseOptions::default()
+    };
+    assert_eq!(titlecase_with_options("new york city stories", &options), "New YORK City Stories");
+}
+
+#[test]
+fn first_word_rule_beats_multiword_matches() {
+    let mut lexicons = ExternalLexicons::default();
+    lexicons.add_multiword_map([("de la soul", "de la Soul"), ("the beatles", "the Beatles")]);
+    let options = TitleCaseOptions::with_external_lexicons(&lexicons);
+
+    // A title never starts lowercase, even when the canonical phrase does
+    // (titlecaseconverter.com MLA: "De la Soul Is Dead").
+    assert_eq!(titlecase_with_options("de la soul is dead", &options), "De la Soul Is Dead");
+    assert_eq!(titlecase_with_options("the beatles anthology", &options), "The Beatles Anthology");
+    // Mid-title the canonical phrase is emitted verbatim.
+    assert_eq!(
+        titlecase_with_options("dancing with de la soul tonight", &options),
+        "Dancing with de la Soul Tonight"
+    );
+    // The first word after a subtitle boundary capitalizes too.
+    assert_eq!(
+        titlecase_with_options("three feet high: de la soul rising", &options),
+        "Three Feet High: De la Soul Rising"
+    );
 }
 
 #[test]
@@ -342,6 +401,26 @@ fn keeps_default_english_behavior_stable() {
 fn preserves_acronyms_and_dotted_abbreviations() {
     assert_eq!(titlecase_mla("nasa and the u.s.a. mission"), "NASA and the U.S.A. Mission");
     assert_eq!(titlecase_mla("meet me at 9 a.m. sharp"), "Meet Me at 9 a.m. Sharp");
+}
+
+#[test]
+fn first_and_last_word_rule_beats_lowercase_dotted_abbreviations() {
+    // MLA always capitalizes the first and last words. Latin abbreviations
+    // raise only their first letter at a mandatory position, matching
+    // titlecaseconverter.com's MLA output ("E.g. a Case Study").
+    assert_eq!(titlecase_mla("e.g. a case study"), "E.g. a Case Study");
+    assert_eq!(titlecase_mla("i.e. the final word"), "I.e. the Final Word");
+    // Meridiem markers are ordinary initialisms, so a mandatory position
+    // restores full caps ("A.M. Radio Days"), again per titlecaseconverter.com.
+    assert_eq!(titlecase_mla("a.m. radio days"), "A.M. Radio Days");
+    assert_eq!(titlecase_mla("wake me at 3 a.m."), "Wake Me at 3 A.M.");
+    // Mid-title both kinds stay lowercase.
+    assert_eq!(titlecase_mla("meet me at 9 a.m. sharp"), "Meet Me at 9 a.m. Sharp");
+    // The same rule applies across a subtitle boundary.
+    assert_eq!(titlecase_mla("chapter one: e.g. examples"), "Chapter One: E.g. Examples");
+    // Irregular dotted words stay verbatim even at a mandatory position;
+    // their casing is not ours to guess.
+    assert_eq!(titlecase_mla("example.com and beyond"), "example.com and Beyond");
 }
 
 #[test]
@@ -415,9 +494,31 @@ fn lowers_name_particles_even_when_small_words_are_not() {
 }
 
 #[test]
+fn keeps_decomposed_words_intact() {
+    // NFD input ("étude" as `e` + U+0301 combining acute) is one word: the
+    // combining mark must not split it, which would capitalize the remainder.
+    assert_eq!(titlecase_mla("e\u{301}tude for piano"), "E\u{301}tude for Piano");
+    // The precomposed (NFC) spelling behaves identically.
+    assert_eq!(titlecase_mla("étude for piano"), "Étude for Piano");
+    // A possessive after a decomposed final letter stays one word.
+    assert_eq!(titlecase_mla("beyonce\u{301}'s world"), "Beyonce\u{301}'s World");
+}
+
+#[test]
 fn keeps_ordinal_suffixes_lowercase() {
     assert_eq!(titlecase_mla("miracle on 34th street"), "Miracle on 34th Street");
     assert_eq!(titlecase_mla("42nd street"), "42nd Street");
+}
+
+#[test]
+fn preserves_digit_led_mixed_case_words() {
+    // A capital after a leading digit is intentional caps ("3D", "4K"), not a
+    // word-initial capital, so preserve_existing_caps keeps it.
+    assert_eq!(titlecase_mla("the 3D movie"), "The 3D Movie");
+    assert_eq!(titlecase_mla("shot in 4K"), "Shot in 4K");
+    assert_eq!(titlecase_mla("my 2FA setup"), "My 2FA Setup");
+    // Without caps in the input there is nothing to preserve.
+    assert_eq!(titlecase_mla("the 3d movie"), "The 3d Movie");
 }
 
 #[test]

@@ -5,16 +5,16 @@ use crate::config::{
     TitleCaseOptions, UnknownWordCasing,
 };
 use crate::context::{
-    first_significant_word, followed_by_hyphen, follows_colon, is_contracted_and,
+    first_significant_word, followed_by_hyphen, follows_subtitle_boundary, is_contracted_and,
     last_significant_word, likely_adverbial_particle, likely_name_particle_context,
-    part_of_hyphenated_compound, preceded_by_hyphen, precedes_colon,
+    part_of_hyphenated_compound, preceded_by_hyphen, precedes_subtitle_boundary,
 };
 use crate::lexicon::{
     abbreviation_spelling, built_in_protected_spelling, is_name_particle_for_locale, is_small_word,
 };
 use crate::token::Token;
 use crate::util::normalize::{lookup_key, normalized_key};
-use crate::util::unicode::push_lowercased;
+use crate::util::unicode::{append_uppercase, push_lowercased};
 
 pub(crate) fn apply(input: &str, tokens: &[Token<'_>], options: &TitleCaseOptions<'_>) -> String {
     let mut output = String::new();
@@ -93,8 +93,21 @@ fn run<const RECORD: bool>(
         if let Some((end_index, canonical_phrase)) = options
             .external_lexicons
             .and_then(|lexicons| lexicons.multiword_spelling(tokens, index))
+            // Protected spellings are never recased, by anything, so a phrase
+            // covering one falls back to the per-word cascade.
+            .filter(|&(end_index, _)| !phrase_contains_protected(tokens, index, end_index, options))
         {
-            output.push_str(canonical_phrase);
+            // The canonical phrase is emitted verbatim except at the start of
+            // the title or a subtitle, where MLA's first-word rule outranks it:
+            // "de la soul is dead" opens with "De la Soul".
+            let capitalize_first = first == Some(index)
+                || (options.capitalize_after_subtitle_boundary
+                    && follows_subtitle_boundary(tokens, index));
+            if capitalize_first {
+                push_phrase_capitalized(output, canonical_phrase, options.locale);
+            } else {
+                output.push_str(canonical_phrase);
+            }
             if RECORD {
                 let source_start = token.text.as_ptr() as usize - base;
                 let end_token = &tokens[end_index];
@@ -125,6 +138,29 @@ fn run<const RECORD: bool>(
             );
         }
         index += 1;
+    }
+}
+
+/// True when any word covered by a multiword match has a protected spelling.
+fn phrase_contains_protected(
+    tokens: &[Token<'_>],
+    start: usize,
+    end: usize,
+    options: &TitleCaseOptions<'_>,
+) -> bool {
+    tokens[start..=end].iter().any(|token| {
+        token.is_word()
+            && protected_spelling(token.text, &normalized_key(token.text), options).is_some()
+    })
+}
+
+/// Appends a canonical phrase with its first letter capitalized, for phrases
+/// that start a title or subtitle segment.
+fn push_phrase_capitalized(output: &mut String, phrase: &str, locale: LocaleProfile) {
+    let mut chars = phrase.chars();
+    if let Some(first) = chars.next() {
+        append_uppercase(output, first, locale);
+        output.push_str(chars.as_str());
     }
 }
 
@@ -181,9 +217,10 @@ fn emit_word<const RECORD: bool>(
     let is_first = first == Some(index);
     let is_last = last == Some(index);
     // MLA capitalizes the first and last words of both the title and the
-    // subtitle, so a colon boundary capitalizes on both sides.
-    let at_colon_boundary = options.capitalize_after_colon
-        && (follows_colon(tokens, index) || precedes_colon(tokens, index));
+    // subtitle, so a boundary (colon, question mark, exclamation point)
+    // capitalizes on both sides.
+    let at_subtitle_boundary = options.capitalize_after_subtitle_boundary
+        && (follows_subtitle_boundary(tokens, index) || precedes_subtitle_boundary(tokens, index));
     let hyphenated = part_of_hyphenated_compound(tokens, index);
     // The first element of a hyphenated compound is always capitalized, even
     // under MlaLike ("A By-Product of War"); only interior elements follow the
@@ -192,7 +229,7 @@ fn emit_word<const RECORD: bool>(
         followed_by_hyphen(tokens, index) && !preceded_by_hyphen(tokens, index);
     let capitalize_hyphen = starts_hyphenated_compound
         || (hyphenated && matches!(options.hyphen_style, HyphenStyle::CapitalizeBoth));
-    let should_capitalize = is_first || is_last || at_colon_boundary || capitalize_hyphen;
+    let should_capitalize = is_first || is_last || at_subtitle_boundary || capitalize_hyphen;
 
     // Protected spellings always win, including over small-word lowering: a
     // spelling the caller asked to protect is never recased.
@@ -233,18 +270,18 @@ fn emit_word<const RECORD: bool>(
         let lowered = lowercase_word(token.text, options.locale);
         // The rule is known to be `AllCapsNormalized`, so the styling outcome is
         // not needed here.
-        let _ = push_styled(output, &lowered, true, options);
+        let _ = push_styled(output, &lowered, true, should_capitalize, options);
         return CasingRule::AllCapsNormalized;
     }
 
-    let outcome = push_styled(output, token.text, true, options);
+    let outcome = push_styled(output, token.text, true, should_capitalize, options);
     if RECORD {
         rule_for_style(
             outcome,
             shouting,
             is_first,
             is_last,
-            at_colon_boundary,
+            at_subtitle_boundary,
             capitalize_hyphen,
             tokens,
             index,
@@ -264,7 +301,7 @@ fn rule_for_style(
     shouting: bool,
     is_first: bool,
     is_last: bool,
-    at_colon_boundary: bool,
+    at_subtitle_boundary: bool,
     capitalize_hyphen: bool,
     tokens: &[Token<'_>],
     index: usize,
@@ -282,7 +319,7 @@ fn rule_for_style(
                 CasingRule::FirstWord
             } else if is_last {
                 CasingRule::LastWord
-            } else if at_colon_boundary {
+            } else if at_subtitle_boundary {
                 CasingRule::SubtitleBoundary
             } else if capitalize_hyphen {
                 CasingRule::HyphenatedCompound
