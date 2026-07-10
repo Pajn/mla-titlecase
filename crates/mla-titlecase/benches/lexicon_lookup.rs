@@ -15,11 +15,9 @@ fn bench_lookup(c: &mut Criterion) {
         (0..5_000).map(|index| (synthetic_word(index + 60_000), format!("Brand{index:05}"))),
     );
 
-    let options = TitleCaseOptions {
-        external_lexicons: Some(&external),
-        small_word_policy: SmallWordPolicy::AlwaysLowercase,
-        ..TitleCaseOptions::default()
-    };
+    let mut options = TitleCaseOptions::default();
+    options.external_lexicons = Some(&external);
+    options.small_word_policy = SmallWordPolicy::AlwaysLowercase;
 
     let protected_hit = synthetic_word(60_042);
     let canonical_hit = synthetic_word(30_077);

@@ -7,6 +7,11 @@ pub mod fst_store;
 pub mod json_store;
 pub mod lexicon;
 pub mod plugin;
+
+/// Internal normalization plumbing shared with the `mla-titlecase-cli` crate,
+/// which ships in lockstep with this one. Hidden from the documented public API
+/// and not covered by semver: external code should not depend on it.
+#[doc(hidden)]
 pub mod util;
 
 mod casing;

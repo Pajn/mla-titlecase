@@ -48,14 +48,17 @@ fn analysis_output_matches_plain_titlecasing() {
     let mut lexicons = ExternalLexicons::default();
     lexicons.add_multiword_map([("new york city", "New York City")]);
     lexicons.add_canonical_map([("postgres", "Postgres")]);
+    let mut particle_options = TitleCaseOptions::default();
+    particle_options.name_particle_policy = NameParticlePolicy::Heuristic;
+    let mut preserve_options = TitleCaseOptions::default();
+    preserve_options.all_caps_policy = AllCapsPolicy::Preserve;
+    let mut lexicon_options = TitleCaseOptions::default();
+    lexicon_options.external_lexicons = Some(&lexicons);
     let option_sets = [
-        TitleCaseOptions {
-            name_particle_policy: NameParticlePolicy::Heuristic,
-            ..Default::default()
-        },
-        TitleCaseOptions { all_caps_policy: AllCapsPolicy::Preserve, ..Default::default() },
+        particle_options,
+        preserve_options,
         TitleCaseOptions::with_locale(LocaleProfile::Turkish),
-        TitleCaseOptions { external_lexicons: Some(&lexicons), ..Default::default() },
+        lexicon_options,
     ];
     let extra = [
         "ludwig van beethoven",
@@ -101,10 +104,8 @@ fn analysis_collapses_multiword_lexicon_match_to_one_span() {
 
 #[test]
 fn analysis_preserve_policy_records_no_spans() {
-    let options = TitleCaseOptions {
-        all_caps_policy: AllCapsPolicy::Preserve,
-        ..TitleCaseOptions::default()
-    };
+    let mut options = TitleCaseOptions::default();
+    options.all_caps_policy = AllCapsPolicy::Preserve;
     // Shouting input under Preserve is returned verbatim, so no decision is
     // recorded.
     let analysis = titlecase_analyze_with_options("STAY WITH ME", &options);
@@ -162,10 +163,8 @@ fn analysis_confidence_reflects_unchanged_heuristic_words() {
     // "van" is already lowercase, so it does not change, but the name-particle
     // heuristic still decided to keep it lowercase. It surfaces as a span and
     // drives the overall confidence.
-    let options = TitleCaseOptions {
-        name_particle_policy: NameParticlePolicy::Heuristic,
-        ..Default::default()
-    };
+    let mut options = TitleCaseOptions::default();
+    options.name_particle_policy = NameParticlePolicy::Heuristic;
     let analysis = titlecase_analyze_with_options("ludwig van beethoven", &options);
     assert_eq!(analysis.output, "Ludwig van Beethoven");
     assert_eq!(analysis.confidence, Confidence::Heuristic);
@@ -178,10 +177,8 @@ fn analysis_confidence_reflects_unchanged_heuristic_words() {
 
 #[test]
 fn analysis_reports_name_particle_heuristic() {
-    let options = TitleCaseOptions {
-        name_particle_policy: NameParticlePolicy::Heuristic,
-        ..Default::default()
-    };
+    let mut options = TitleCaseOptions::default();
+    options.name_particle_policy = NameParticlePolicy::Heuristic;
     let analysis = titlecase_analyze_with_options("Ludwig Van Beethoven", &options);
     assert_eq!(analysis.output, "Ludwig van Beethoven");
     let van = span_for(&analysis, "Ludwig Van Beethoven", "Van");
@@ -260,10 +257,8 @@ fn treats_question_and_exclamation_marks_as_subtitle_boundaries() {
 fn handles_hyphenated_compounds() {
     assert_eq!(titlecase_mla("state-of-the-art design"), "State-of-the-Art Design");
 
-    let options = TitleCaseOptions {
-        hyphen_style: HyphenStyle::CapitalizeBoth,
-        ..TitleCaseOptions::default()
-    };
+    let mut options = TitleCaseOptions::default();
+    options.hyphen_style = HyphenStyle::CapitalizeBoth;
     assert_eq!(
         titlecase_with_options("state-of-the-art design", &options),
         "State-Of-The-Art Design"
@@ -294,11 +289,9 @@ fn supports_additive_external_lexicons() {
     lexicons.add_protected_spellings([("copilot", "Copilot")]);
     lexicons.add_word_set(["amidst"]);
 
-    let options = TitleCaseOptions {
-        external_lexicons: Some(&lexicons),
-        small_word_policy: SmallWordPolicy::AlwaysLowercase,
-        ..TitleCaseOptions::default()
-    };
+    let mut options = TitleCaseOptions::default();
+    options.external_lexicons = Some(&lexicons);
+    options.small_word_policy = SmallWordPolicy::AlwaysLowercase;
 
     assert_eq!(
         titlecase_with_options("copilot amidst postgres updates", &options),
@@ -313,11 +306,9 @@ fn protected_spellings_win_over_multiword_matches() {
     // match: protected spellings are never recased, by anything.
     let mut lexicons = ExternalLexicons::default();
     lexicons.add_multiword_map([("new york city", "New York City")]);
-    let options = TitleCaseOptions {
-        protected_words: &["YORK"],
-        external_lexicons: Some(&lexicons),
-        ..TitleCaseOptions::default()
-    };
+    let mut options = TitleCaseOptions::default();
+    options.protected_words = &["YORK"];
+    options.external_lexicons = Some(&lexicons);
     assert_eq!(titlecase_with_options("new york city stories", &options), "New YORK City Stories");
 }
 
@@ -353,20 +344,16 @@ fn protected_spellings_survive_small_word_lowering() {
     let mut lexicons = ExternalLexicons::default();
     lexicons.add_protected_spellings([("github", "GitHub")]);
     lexicons.add_word_set(["github"]);
-    let options = TitleCaseOptions {
-        external_lexicons: Some(&lexicons),
-        small_word_policy: SmallWordPolicy::AlwaysLowercase,
-        ..TitleCaseOptions::default()
-    };
+    let mut options = TitleCaseOptions::default();
+    options.external_lexicons = Some(&lexicons);
+    options.small_word_policy = SmallWordPolicy::AlwaysLowercase;
     assert_eq!(titlecase_with_options("learning github daily", &options), "Learning GitHub Daily");
 }
 
 #[test]
 fn supports_name_particle_heuristics() {
-    let options = TitleCaseOptions {
-        name_particle_policy: NameParticlePolicy::Heuristic,
-        ..TitleCaseOptions::default()
-    };
+    let mut options = TitleCaseOptions::default();
+    options.name_particle_policy = NameParticlePolicy::Heuristic;
 
     assert_eq!(
         titlecase_with_options("ludwig van beethoven in concert", &options),
@@ -457,8 +444,8 @@ fn keeps_prepositional_uses_lowercase() {
     assert_eq!(titlecase_mla("livin' on a prayer"), "Livin' on a Prayer");
     assert_eq!(titlecase_mla("the wind in the willows"), "The Wind in the Willows");
 
-    let options =
-        TitleCaseOptions { capitalize_phrasal_particles: false, ..TitleCaseOptions::default() };
+    let mut options = TitleCaseOptions::default();
+    options.capitalize_phrasal_particles = false;
     assert_eq!(titlecase_with_options("turn off the lights", &options), "Turn off the Lights");
 }
 
@@ -482,11 +469,9 @@ fn keeps_contracted_and_lowercase() {
 fn lowers_name_particles_even_when_small_words_are_not() {
     // With NeverLowercase small words keep their capitals, but the name-particle
     // heuristic still lowers particles inside a likely personal name.
-    let options = TitleCaseOptions {
-        small_word_policy: SmallWordPolicy::NeverLowercase,
-        name_particle_policy: NameParticlePolicy::Heuristic,
-        ..TitleCaseOptions::default()
-    };
+    let mut options = TitleCaseOptions::default();
+    options.small_word_policy = SmallWordPolicy::NeverLowercase;
+    options.name_particle_policy = NameParticlePolicy::Heuristic;
     assert_eq!(
         titlecase_with_options("ludwig van beethoven in concert", &options),
         "Ludwig van Beethoven In Concert"
@@ -534,10 +519,8 @@ fn recases_all_caps_input() {
 
 #[test]
 fn preserves_all_caps_input_under_preserve_policy() {
-    let options = TitleCaseOptions {
-        all_caps_policy: AllCapsPolicy::Preserve,
-        ..TitleCaseOptions::default()
-    };
+    let mut options = TitleCaseOptions::default();
+    options.all_caps_policy = AllCapsPolicy::Preserve;
     // Intentional stylization is returned verbatim: no recasing, no small-word
     // lowering.
     assert_eq!(titlecase_with_options("STAY WITH ME", &options), "STAY WITH ME");
@@ -553,13 +536,10 @@ fn preserves_all_caps_input_under_preserve_policy() {
 fn recases_known_words_and_preserves_unknown_acronyms() {
     let mut dictionary = ExternalLexicons::default();
     dictionary.add_word_set(["history", "years", "handbook"]);
-    let options = TitleCaseOptions {
-        all_caps_policy: AllCapsPolicy::NormalizeKnownWords {
-            unknown: UnknownWordCasing::Preserve,
-        },
-        external_lexicons: Some(&dictionary),
-        ..TitleCaseOptions::default()
-    };
+    let mut options = TitleCaseOptions::default();
+    options.all_caps_policy =
+        AllCapsPolicy::NormalizeKnownWords { unknown: UnknownWordCasing::Preserve };
+    options.external_lexicons = Some(&dictionary);
 
     // NASA is restored by the built-in abbreviation table; "history" is a
     // dictionary word, so it recases. Neither exercises the dictionary gate on
@@ -571,12 +551,9 @@ fn recases_known_words_and_preserves_unknown_acronyms() {
     assert_eq!(titlecase_with_options("SHERLOCK HOLMES", &options), "SHERLOCK HOLMES");
 
     // With no dictionary loaded, the policy falls back to full normalization.
-    let no_dictionary = TitleCaseOptions {
-        all_caps_policy: AllCapsPolicy::NormalizeKnownWords {
-            unknown: UnknownWordCasing::Preserve,
-        },
-        ..TitleCaseOptions::default()
-    };
+    let mut no_dictionary = TitleCaseOptions::default();
+    no_dictionary.all_caps_policy =
+        AllCapsPolicy::NormalizeKnownWords { unknown: UnknownWordCasing::Preserve };
     assert_eq!(
         titlecase_with_options("THE WIND IN THE WILLOWS", &no_dictionary),
         "The Wind in the Willows"
@@ -587,13 +564,10 @@ fn recases_known_words_and_preserves_unknown_acronyms() {
 fn title_cases_unknown_words_when_requested() {
     let mut dictionary = ExternalLexicons::default();
     dictionary.add_word_set(["history", "years", "handbook"]);
-    let options = TitleCaseOptions {
-        all_caps_policy: AllCapsPolicy::NormalizeKnownWords {
-            unknown: UnknownWordCasing::TitleCase,
-        },
-        external_lexicons: Some(&dictionary),
-        ..TitleCaseOptions::default()
-    };
+    let mut options = TitleCaseOptions::default();
+    options.all_caps_policy =
+        AllCapsPolicy::NormalizeKnownWords { unknown: UnknownWordCasing::TitleCase };
+    options.external_lexicons = Some(&dictionary);
 
     // Unknown words are now title-cased instead of preserved as acronyms.
     assert_eq!(titlecase_with_options("SHERLOCK HOLMES", &options), "Sherlock Holmes");
@@ -610,13 +584,11 @@ fn title_cases_unknown_words_when_requested() {
 fn preserves_short_unknown_words_as_acronyms() {
     let mut dictionary = ExternalLexicons::default();
     dictionary.add_word_set(["report", "and", "the"]);
-    let options = TitleCaseOptions {
-        all_caps_policy: AllCapsPolicy::NormalizeKnownWords {
-            unknown: UnknownWordCasing::PreserveShortAcronyms { max_acronym_len: 4 },
-        },
-        external_lexicons: Some(&dictionary),
-        ..TitleCaseOptions::default()
+    let mut options = TitleCaseOptions::default();
+    options.all_caps_policy = AllCapsPolicy::NormalizeKnownWords {
+        unknown: UnknownWordCasing::PreserveShortAcronyms { max_acronym_len: 4 },
     };
+    options.external_lexicons = Some(&dictionary);
 
     // Short unknown words (<= 4 letters) are preserved as likely acronyms;
     // longer unknown words are title-cased as likely names.

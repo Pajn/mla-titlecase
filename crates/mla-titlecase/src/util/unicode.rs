@@ -2,15 +2,9 @@
 
 use crate::config::LocaleProfile;
 
-/// Returns whether the string has at least one cased character.
-#[must_use]
-pub fn has_cased_letter(value: &str) -> bool {
-    value.chars().any(|ch| ch.is_uppercase() || ch.is_lowercase())
-}
-
 /// Lowercases a string using locale-aware handling for the supported profiles.
 #[must_use]
-pub fn lowercase_with_locale(value: &str, locale: LocaleProfile) -> String {
+pub(crate) fn lowercase_with_locale(value: &str, locale: LocaleProfile) -> String {
     let mut out = String::with_capacity(value.len());
     push_lowercased(&mut out, value, locale);
     out
@@ -41,9 +35,12 @@ pub(crate) fn push_lowercased(out: &mut String, value: &str, locale: LocaleProfi
     }
 }
 
-/// Title-capitalizes a token using locale-aware handling for the supported profiles.
+/// Title-capitalizes a token using locale-aware handling for the supported
+/// profiles. Only exercised by tests; production code appends into a reused
+/// buffer via [`push_capitalized`].
+#[cfg(test)]
 #[must_use]
-pub fn capitalize_with_locale(value: &str, locale: LocaleProfile) -> String {
+pub(crate) fn capitalize_with_locale(value: &str, locale: LocaleProfile) -> String {
     let mut out = String::with_capacity(value.len());
     push_capitalized(&mut out, value, locale);
     out
@@ -145,13 +142,7 @@ pub(crate) fn append_uppercase(output: &mut String, ch: char, locale: LocaleProf
 mod tests {
     use crate::config::LocaleProfile;
 
-    use super::{capitalize_with_locale, has_cased_letter, lowercase_with_locale};
-
-    #[test]
-    fn detects_cased_letters() {
-        assert!(has_cased_letter("Rust"));
-        assert!(!has_cased_letter("123"));
-    }
+    use super::{capitalize_with_locale, lowercase_with_locale};
 
     #[test]
     fn capitalizes_after_single_letter_apostrophe_prefixes() {

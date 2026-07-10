@@ -35,10 +35,8 @@ fn bench_titlecase(c: &mut Criterion) {
         b.iter(|| black_box(titlecase_mla(PUNCTUATION_HEAVY)))
     });
 
-    let particle_options = TitleCaseOptions {
-        name_particle_policy: NameParticlePolicy::Heuristic,
-        ..TitleCaseOptions::default()
-    };
+    let mut particle_options = TitleCaseOptions::default();
+    particle_options.name_particle_policy = NameParticlePolicy::Heuristic;
     c.bench_function("titlecase_name_particles", |b| {
         b.iter(|| {
             black_box(titlecase_with_options(
@@ -48,10 +46,8 @@ fn bench_titlecase(c: &mut Criterion) {
         })
     });
 
-    let lowercase_options = TitleCaseOptions {
-        small_word_policy: SmallWordPolicy::AlwaysLowercase,
-        ..TitleCaseOptions::default()
-    };
+    let mut lowercase_options = TitleCaseOptions::default();
+    lowercase_options.small_word_policy = SmallWordPolicy::AlwaysLowercase;
     c.bench_function("titlecase_repeated_hot_path", |b| {
         b.iter(|| {
             for _ in 0..50 {

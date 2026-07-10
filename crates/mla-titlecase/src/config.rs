@@ -84,6 +84,7 @@ pub enum NameParticlePolicy {
 
 /// Locale/profile hook for opt-in CLDR-inspired casing extensions.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum LocaleProfile {
     /// Default English-centric MLA behavior.
     English,
@@ -102,7 +103,20 @@ pub enum LocaleProfile {
 }
 
 /// Options for [`crate::titlecase_with_options`].
+///
+/// Marked `#[non_exhaustive]` so future casing knobs can be added without a
+/// breaking change. Downstream crates therefore cannot build this with a struct
+/// literal (including `..Default::default()`); start from [`Default`] or a
+/// `with_*` constructor and mutate the public fields you care about:
+///
+/// ```
+/// use mla_titlecase::{HyphenStyle, TitleCaseOptions};
+///
+/// let mut options = TitleCaseOptions::default();
+/// options.hyphen_style = HyphenStyle::CapitalizeBoth;
+/// ```
 #[derive(Debug, Clone)]
+#[non_exhaustive]
 pub struct TitleCaseOptions<'a> {
     /// Preserve mixed-case input such as `iPhone` when the word is not forced lowercase.
     pub preserve_existing_caps: bool,
