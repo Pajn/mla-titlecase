@@ -1,4 +1,5 @@
 //! Shared normalization helpers.
 
+// `normalize` is shared with the CLI crate; `unicode` is library-internal.
 pub mod normalize;
-pub mod unicode;
+pub(crate) mod unicode;

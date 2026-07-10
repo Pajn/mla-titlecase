@@ -39,12 +39,15 @@ See [`docs/mla-rules.md`](../../docs/mla-rules.md) for the full rule set.
 ### Options
 
 `TitleCaseOptions` controls behavior; every field has a sensible MLA default, so
-override only what you need:
+override only what you need. It is `#[non_exhaustive]`, so start from
+`Default`/a `with_*` constructor and mutate the public fields you care about
+rather than building it with a struct literal:
 
 ```rust
-use mla_titlecase::{titlecase_with_options, TitleCaseOptions};
+use mla_titlecase::{titlecase_with_options, HyphenStyle, TitleCaseOptions};
 
-let options = TitleCaseOptions::with_protected_words(&["PostgreSQL"]);
+let mut options = TitleCaseOptions::with_protected_words(&["PostgreSQL"]);
+options.hyphen_style = HyphenStyle::CapitalizeBoth;
 assert_eq!(
     titlecase_with_options("learning postgresql with github", &options),
     "Learning PostgreSQL with GitHub",
